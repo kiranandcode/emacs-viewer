@@ -1,4 +1,4 @@
 (executable
  (public_name emacs_viewer)
  (name main)
- (libraries emacs_viewer dream cmdliner))
+ (libraries emacs_viewer dream cmdliner bos sexplib))
