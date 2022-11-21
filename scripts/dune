@@ -1,0 +1,3 @@
+(executable (name run_and_rebuild)
+ (modules run_and_rebuild)
+ (libraries unix core_unix inotify cmdliner core ptime bos ptime.clock.os))
