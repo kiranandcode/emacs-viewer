@@ -1,2 +1,4 @@
 (library
- (name emacs_viewer))
+ (name emacs_viewer)
+ (libraries core decoders decoders-sexplib)
+ (preprocess (pps ppx_deriving.std)))

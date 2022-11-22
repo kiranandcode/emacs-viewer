@@ -28,7 +28,7 @@ let run port =
         | Error (`Msg err) ->
           Dream.html ("error: " ^ err)
         | Ok sexp ->
-          Dream.html (Sexp.to_string_hum sexp)
+          Dream.html ("<html><head><title>Agenda</title></head><body><pre>" ^ Sexp.to_string_hum sexp ^ "</pre></body></html>")
       );
       Dream.get "/" (fun _req ->
         print_endline "hello world";
@@ -37,7 +37,6 @@ let run port =
     ]
 
   end
-
 
 
 open Cmdliner

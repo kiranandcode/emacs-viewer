@@ -1,0 +1,2 @@
+(cram
+ (deps ../sexp_parser.exe (glob_files ../resources/*.sexp)))

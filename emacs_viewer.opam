@@ -12,6 +12,7 @@ depends: [
   "dream"
   "note"
   "brr"
+  "unix"
   "odoc" {with-doc}
 ]
 build: [

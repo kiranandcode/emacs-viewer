@@ -1,1 +1,33 @@
-* TODO Convert todo list to pretty printed form  
+#+TODO: TODO(t) | FAILED(f@) DONE(d!)
+* TODO +Convert+ epic /todo list/ ~to~ *pretty* _printed_ =form or other= for random_{things} or other^{things} and =save_epic= and \Gamma is not awesome
+** TODO Subtask number 1
+** TODO Task 2
+:LOGBOOK:
+CLOCK: [2022-11-22 Tue 07:10]--[2022-11-22 Tue 07:43] =>  0:33
+:END:
+** TODO Task 3 src_sh[:exports code]{echo -e "test"}
+:LOGBOOK:
+CLOCK: [2022-11-22 Tue 07:43]
+:END:
+** FAILED Failure
+CLOSED: [2022-11-22 Tue 08:44]
+:LOGBOOK:
+- State "FAILED"     from "FAILED"     [2022-11-22 Tue 08:45] \\
+  failed
+- State "FAILED"     from "TODO"       [2022-11-22 Tue 08:44]
+:END:
+* TODO [#A] High priority task
+SCHEDULED: <2022-11-23 Wed>
+Here is some text?
+#+begin_src c
+    epic(int x) {
+    return x;
+    }
+#+end_src
+Awesom
+* TODO [#C] Low priority task
+* Non-todo element
+* Element with tags                                          :tag1:tag2:tag3:
+* Element with a single tag                                            :tagsingle:
+* DONE Completed element
+CLOSED: [2022-11-22 Tue 06:58]

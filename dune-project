@@ -3,7 +3,7 @@
 (name emacs_viewer)
 
 (generate_opam_files true)
-
+(cram enable)
 
 (authors "gopiandcode")
 
