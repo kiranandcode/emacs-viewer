@@ -28,7 +28,19 @@ let run port =
         | Error (`Msg err) ->
           Dream.html ("error: " ^ err)
         | Ok sexp ->
-          Dream.html ("<html><head><title>Agenda</title></head><body><pre>" ^ Sexp.to_string_hum sexp ^ "</pre></body></html>")
+          match Emacs_viewer.Org_data.org_buffer_data sexp with
+          | Error err -> 
+              Dream.html ("<html><head><title>Agenda - Error</title></head><body>"
+                          ^ "<p> Error: " ^ Decoders.Error.to_string Sexp.pp_hum err
+                          ^ "<br/><pre>"
+                          ^ Sexp.to_string_hum sexp
+                          ^ "</pre></body></html>")
+          | Ok data ->
+            let data = [%show:(string * Emacs_viewer.Org_data.t list) list] data in
+            Dream.html ("<html><head><title>Agenda</title></head><body>"
+                        ^ "<br/><pre>"
+                        ^ data
+                        ^ "</pre></body></html>")
       );
       Dream.get "/" (fun _req ->
         print_endline "hello world";
