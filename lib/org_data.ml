@@ -57,6 +57,7 @@ let property_list decoder : (string * 'a) list decoder =
   | _ as context ->
     err ~context "expected property list, received invalid form"
 
+
 let property_list_opt decoder =
   let* kv = (property_list (maybe decoder)) in
   let kv = List.filter_map ~f:(function (k, Some vl) -> Some (k,vl) | _ -> None) kv in
@@ -87,6 +88,29 @@ let typed_property_list ?(opts=[]) bindings f =
         | Error err -> Error err
         | Ok v -> loop (rest, (acc v)) in
     from_result @@ loop (bindings, f)
+
+let typed_list bindings f =
+  function
+  | Sexp.List elts as context ->
+    let count = ref 0 in
+    let rec loop : type a b . (a, b) KV.t * a * value list -> (b, value Decoders.Error.t) Result.t =
+      function
+      | KV.[], acc, [] -> Ok acc
+      | [], _, rest ->
+        let extra = List.length rest in
+        err ~context "expected a list of %d elements, found %d (%d extra elements)"
+          !count (!count + extra) extra
+      | (_ :: _), _, [] ->
+        err ~context "expected a list of at least %d elements, found fewer" !count
+      | (key,decoder) :: rest, acc, hd :: tl ->
+        incr count;
+        match decoder hd with
+        | Error err -> Error (Decoders.Error.tag key err)
+        | Ok v ->
+          loop (rest, acc v, tl) in
+    loop (bindings, f, elts)
+  | context ->
+    err ~context "expected a list of elements"
 
 type pos = {
   begin_: int;
@@ -437,6 +461,16 @@ let org_data =
   end
 
 let org_buffer_data = alist org_data
+
+type buffer_timestamp = { modification_time: int; modification_count: int } [@@deriving show]
+
+let buffer_timestamp =
+  typed_list KV.["modification-time", int; "modification-count", int]
+    (fun modification_time modification_count ->
+       {modification_time; modification_count}
+    )
+
+let buffer_list = alist buffer_timestamp
 
 let run decoder s = D.decode_value decoder s
   

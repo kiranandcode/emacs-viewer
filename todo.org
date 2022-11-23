@@ -1,8 +1,11 @@
 * DONE Implement parser for org-element-data in OCaml
 CLOSED: [2022-11-22 Tue 11:04]
-* TODO Write elisp code to remove parent properties 
-* TODO Write elisp code to get names of all org buffers
-* TODO Write elisp code to get last modified + changes timestamp for buffer for refreshing agenda view 
+* DONE Write elisp code to remove parent properties 
+CLOSED: [2022-11-23 Wed 09:57]
+* DONE Write elisp code to get names of all org buffers
+CLOSED: [2022-11-23 Wed 10:09]
+* DONE Write elisp code to get last modified + changes timestamp for buffer for refreshing agenda view 
+CLOSED: [2022-11-23 Wed 10:09]
 Check out src_emacs[:exports code]{buffer-modified-tick} and src_emacs[:exports code]{visited-file-modtime}
 * TODO On load to home, collect org buffer names, select first and redirect to =/buffer/buffer-name=
 * TODO Use parameter =/buffer/buffer-name= to collect buffer-name or redirect to first valid buffer name
