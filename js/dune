@@ -1,0 +1,4 @@
+(executables (names app)
+ (modes js)
+ (libraries core incr_dom)
+ (preprocess (pps js_of_ocaml-ppx ppx_deriving.std ppx_compare ppx_fields_conv ppx_let ppx_sexp_conv)))

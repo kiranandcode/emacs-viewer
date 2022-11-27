@@ -32,9 +32,30 @@ let collect_todos_cmd = {elisp|
 |elisp}
 
 
+
 let run port =
   Dream.run ?port begin
     Dream.router [
+      Dream.get "/static/js/**" @@ Dream.static "_build/default/js";
+      Dream.get "/static/styles/**" @@ Dream.static "_build/default/styles";
+      Dream.get "/" (fun _req ->
+        Dream.html {html|
+          <!doctype html>
+          <html lang="en">
+             <head>
+                 <meta charset="utf-8">
+                 <meta name="viewport" content="width=device-width, initial-scale=1">
+		 <title>Org Agenda • TodoMVC</title>
+   		 <link rel="stylesheet" href="static/styles/style.css">
+                 <script src="static/js/app.bc.js"></script>
+             </head>
+             <body>
+                <div id="app">
+                </div>
+             </body>
+          </html>
+        |html}
+      );
       Dream.get "/buffers" (fun _req ->
         match emacs_cmd collect_org_buffers_cmd with
         | Error (`Msg err) ->

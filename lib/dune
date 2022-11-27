@@ -1,4 +1,4 @@
 (library
  (name emacs_viewer)
- (libraries core dream bos decoders decoders-sexplib)
+ (libraries core dream bos incr_dom decoders decoders-sexplib)
  (preprocess (pps ppx_deriving.std)))

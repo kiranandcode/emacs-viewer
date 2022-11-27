@@ -17,7 +17,7 @@ let rebuild_timeout_passed current_time last_rebuild_time =
 let build_project () =
   let open Bos in
   let opam = Cmd.v "opam" in
-  match OS.Cmd.run Cmd.(opam % "exec" % "--" % "dune" % "build" % "./bin/main.exe") with
+  match OS.Cmd.run Cmd.(opam % "exec" % "--" % "dune" % "build" % "@server") with
   | Ok () -> true
   | Error (`Msg _) ->
     Format.printf "ERR: failed to build project\n%!";
@@ -58,6 +58,7 @@ let watch = Inotify.add_watch inotify "./" [Inotify.S_Modify]
 let watch = Inotify.add_watch inotify "./scripts" [Inotify.S_Modify]
 let watch = Inotify.add_watch inotify "./lib" [Inotify.S_Modify; Inotify.S_Create]
 let watch = Inotify.add_watch inotify "./bin" [Inotify.S_Modify; Inotify.S_Create]
+let watch = Inotify.add_watch inotify "./js" [Inotify.S_Modify; Inotify.S_Create]
 
 let last_rebuild_time = ref None
 let running_process_pid = ref None

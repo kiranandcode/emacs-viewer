@@ -3,3 +3,7 @@
  (name main)
   (preprocess (pps ppx_deriving.std))
  (libraries emacs_viewer dream cmdliner bos sexplib))
+
+
+(alias (name server)
+ (deps ../js/app.bc.js ./main.exe (glob_files ../styles/*.css)))
