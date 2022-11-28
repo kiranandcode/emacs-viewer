@@ -405,7 +405,12 @@ let buffer_timestamp =
        Data.{modification_time; modification_count}
     )
 
-let buffer_list = alist buffer_timestamp
+
+let buffer_list = alist begin
+  uncons (fun name ->
+    buffer_timestamp >|= Tuple2.create name) string
+
+end
 
 let run decoder s = D.decode_value decoder s
   
