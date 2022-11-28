@@ -3,6 +3,8 @@ module Sexp = Sexplib.Sexp
 module D = Decoders_sexplib.Decode
 open D
 
+open Emacs_data
+
 let option_or_else f = function None -> f () | Some v -> Some v
 let derr ?context fmt =
   Format.ksprintf (fun s -> Decoders.Error.make ?context s) fmt
@@ -112,72 +114,6 @@ let typed_list bindings f =
   | context ->
     err ~context "expected a list of elements"
 
-type pos = {
-  begin_: int;
-  end_: int;
-}
-[@@deriving show]
-
-type property = { key: string; value: string; pos: pos}
-[@@deriving show]
-
-type tag = string
-[@@deriving show]
-
-type op = Italic | Strikethrough | Bold | Underline | Subscript | Superscript
-[@@deriving show]
-
-type txt =
-  | Lit of string
-  | Concat of txt list
-  | Code of string | Verbatim of string
-  | Entity of string
-  | Format of op * txt
-  | InlineSrcBlock of { language: string; value: string }  
-[@@deriving show]
-
-type time = { year: int; month: int; day: int; hour: int option; minute: int option }
-[@@deriving show]
-
-type timestamp = { raw: string; start: time; end_: time; pos: pos }
-[@@deriving show]
-
-type todo = {
-  keyword: string;
-  ty: [`Todo | `Done];
-}
-[@@deriving show]
-
-type t =
-  | Property of property
-  | Section of { pos: pos; properties: t list}
-  | Headline of {
-      raw_value: string;
-      title: txt;
-      pos: pos;
-      level: int;
-      priority: int option;
-      tags: tag list;
-      todo: todo option;
-      subsections: t list;
-      closed: timestamp option;
-      scheduled: timestamp option;
-      deadline: timestamp option;
-    }
-  | Drawer of { name: string; pos: pos; contents: t list }
-  | Clock of {
-      status: [`running | `closed ];
-      value: timestamp;
-      duration: string option;
-      pos: pos;
-    }
-  | Planning of {
-      closed: timestamp option;
-      scheduled: timestamp option;
-      deadline: timestamp option;
-      pos: pos;
-    }
-[@@deriving show]
 
 let property =
   let* kv = tagged_list "keyword" (singleton (property_list_opt string)) in
@@ -185,7 +121,7 @@ let property =
   match Option.all [find ":key"; find ":value"; find ":begin"; find ":end"] with
   | Some [key; value; begin_;end_] ->
     let begin_, end_ = Int.of_string begin_, Int.of_string end_ in
-    succeed ({key;value; pos={begin_;end_}})
+    succeed (Data.{key;value; pos={begin_;end_}})
   | _ ->
     fail "invalid form for property list"
 
@@ -236,7 +172,7 @@ let timestamp = function
     ] (fun raw_value
         year_start month_start day_start hour_start minute_start
         year_end month_end day_end hour_end minute_end begin_ end_ ->
-        {
+        Data.{
           raw=raw_value;
           start={ year=year_start; month=month_start; day=day_start; hour=hour_start; minute=minute_start };
           end_={ year=year_end; month=month_end; day=day_end; hour=hour_end; minute=minute_end };
@@ -249,37 +185,37 @@ let timestamp = function
 let rec txt =
   let (let+) x f = Result.bind x ~f in
   function
-  | Sexp.List (Atom "#" :: List (Atom txt :: _) :: []) -> Ok (Lit txt)
+  | Sexp.List (Atom "#" :: List (Atom txt :: _) :: []) -> Ok (Data.Lit txt)
   | Sexp.List (Atom "strike-through" :: _ :: rest) ->
     let+ rest = txt (List rest) in
-    Ok (Format (Strikethrough, rest))
+    Ok (Data.Format (Strikethrough, rest))
   | Sexp.List (Atom "italic" :: _ :: rest) ->
     let+ rest = txt (List rest) in
-    Ok (Format (Italic, rest))
+    Ok (Data.Format (Italic, rest))
   | Sexp.List (Atom "bold" :: _ :: rest) ->
     let+ rest = txt (List rest) in
-    Ok (Format (Bold, rest))
+    Ok (Data.Format (Bold, rest))
   | Sexp.List (Atom "underline" :: _ :: rest) ->
     let+ rest = txt (List rest) in
-    Ok (Format (Underline, rest))
+    Ok (Data.Format (Underline, rest))
   | Sexp.List (Atom "subscript" :: _ :: rest) ->
     let+ rest = txt (List rest) in
-    Ok (Format (Subscript, rest))
+    Ok (Data.Format (Subscript, rest))
   | Sexp.List (Atom "superscript" :: _ :: rest) ->
     let+ rest = txt (List rest) in
-    Ok (Format (Superscript, rest))
+    Ok (Data.Format (Superscript, rest))
   | Sexp.List (Atom "code" :: prop_list :: []) ->
     let+ prop_list = property_list_opt string prop_list in
     let+ value = List.Assoc.find ~equal:String.equal prop_list ":value"
                  |> Result.of_option
                       ~error:(derr "failed to find value binding for code") in
-    Ok (Code value)
+    Ok (Data.Code value)
   | Sexp.List (Atom "verbatim" :: prop_list :: []) ->
     let+ prop_list = property_list_opt string prop_list in
     let+ value = List.Assoc.find ~equal:String.equal prop_list ":value"
                  |> Result.of_option
                       ~error:(derr "failed to find value binding for code") in
-    Ok (Verbatim value)
+    Ok (Data.Verbatim value)
   | Sexp.List (Atom "entity" :: prop_list :: []) ->
     let+ prop_list = property_list_opt string prop_list in
     let+ value = List.Assoc.find ~equal:String.equal prop_list ":html"
@@ -291,7 +227,7 @@ let rec txt =
                    List.Assoc.find ~equal:String.equal prop_list ":latex")
                  |> Result.of_option
                       ~error:(derr "failed to find encodable binding for entity") in
-    Ok (Entity value)
+    Ok (Data.Entity value)
   | Sexp.List (Atom "inline-src-block" :: prop_list :: []) ->
     let+ prop_list = property_list_opt string prop_list in
     let+ lang = List.Assoc.find ~equal:String.equal prop_list ":language"
@@ -300,7 +236,7 @@ let rec txt =
     let+ value = List.Assoc.find ~equal:String.equal prop_list ":value"
                  |> Result.of_option
                       ~error:(derr "failed to find value for inline-src-block") in
-    Ok (InlineSrcBlock {language=lang;value})
+    Ok (Data.InlineSrcBlock {language=lang;value})
   | Sexp.List elts ->
     let rec loop acc = function
       | Sexp.Atom "#" :: vl :: rest ->
@@ -309,7 +245,7 @@ let rec txt =
       | vl :: rest ->
         let+ binding = txt vl in
         loop (binding :: acc) rest
-      | [] -> Ok (Concat (List.rev acc)) in
+      | [] -> Ok (Data.Concat (List.rev acc)) in
     loop [] elts
   | context -> err ~context "expected literal sexp"
 
@@ -321,7 +257,7 @@ let section t =
     match find ":begin", find ":end" with
     | Some begin_, Some end_ ->
       let begin_, end_ = Int.of_string begin_, Int.of_string end_ in
-      succeed (Section {pos={begin_; end_}; properties})
+      succeed (Data.Section {pos={begin_; end_}; properties})
     | _ -> fail "invalid form for section"
   end
 
@@ -350,14 +286,14 @@ let headline t =
           ":title", txt
         ] (fun raw_value begin_ end_ level priority tags todo_keyword todo_type title ->
           let todo =
-            Option.map ~f:(fun (keyword, ty) -> {keyword;ty}) @@
+            Option.map ~f:(fun (keyword, ty) -> Data.{keyword;ty}) @@
             Option.both todo_keyword todo_type in
           let tags = Option.value ~default:[] tags in
           let closed = !closed in
           let scheduled = !scheduled in
           let deadline = !deadline in
           fun subsections ->
-            Headline {
+            Data.Headline {
               raw_value; title;
               pos={begin_; end_};
               level;
@@ -385,7 +321,7 @@ let drawer t =
           ":drawer-name", string;
         ] (fun begin_ end_ drawer_name ->
           fun contents ->
-            Drawer {
+            Data.Drawer {
               name=drawer_name;
               pos={begin_;end_};
               contents
@@ -411,7 +347,7 @@ let clock =
           ":duration", nillable string;
           ":begin", int; ":end", int;
         ] (fun status value duration begin_ end_ ->
-          Clock {
+          Data.Clock {
             status;
             value;
             duration;
@@ -430,7 +366,7 @@ let planning =
           ":deadline", nillable timestamp;
           ":begin", int; ":end", int;
         ] (fun closed scheduled deadline begin_ end_ ->
-          Planning {
+          Data.Planning {
             closed;
             scheduled;
             deadline;
@@ -442,7 +378,7 @@ let planning =
 let t =
   fix (fun t ->
     one_of [
-      "property", property >|= (fun prop -> Property prop);
+      "property", property >|= (fun prop -> Data.Property prop);
       "clock", clock;
       "planning", planning;
       "section", section t;
@@ -462,12 +398,11 @@ let org_data =
 
 let org_buffer_data = alist org_data
 
-type buffer_timestamp = { modification_time: int; modification_count: int } [@@deriving show]
 
 let buffer_timestamp =
   typed_list KV.["modification-time", int; "modification-count", int]
     (fun modification_time modification_count ->
-       {modification_time; modification_count}
+       Data.{modification_time; modification_count}
     )
 
 let buffer_list = alist buffer_timestamp

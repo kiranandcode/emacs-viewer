@@ -1,4 +1,6 @@
 (executables (names app)
  (modes js)
- (libraries core incr_dom)
- (preprocess (pps js_of_ocaml-ppx ppx_deriving.std ppx_compare ppx_fields_conv ppx_let ppx_sexp_conv)))
+ (libraries
+   emacs_data
+   core bonsai bonsai.web async_js)
+ (preprocess (pps js_of_ocaml-ppx ppx_here ppx_deriving.show ppx_compare ppx_sexp_conv ppx_fields_conv ppx_let)))
