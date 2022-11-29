@@ -64,7 +64,7 @@ let current_buffer_to_view current_buffer =
        ))
 
 
-let bufferlist_to_view ~set_current_buffer ~set_state
+let bufferlist_to_view ~set_current_buffer ~set_state ~reload_state
       (model: BufferList.t Value.t) : Vdom.Node.t Computation.t =
   let%sub current_buffer = return (Value.map ~f:BufferList.current_buffer model) in
   let%sub current_buffer_view = current_buffer_to_view current_buffer in
@@ -97,7 +97,10 @@ let bufferlist_to_view ~set_current_buffer ~set_state
             a ~attr:(Vdom.Attr.classes ["buffer"; "buffers"]) [text name]
           ]
         ) buffers;
-        [div ~attr:(Vdom.Attr.classes ["navigation-button"]) [
+        [div ~attr:Vdom.Attr.(many_without_merge [
+           classes ["navigation-button"];
+           on_click (fun _ -> reload_state set_state)
+         ]) [
            a ~attr:(Vdom.Attr.classes ["buffer-refresh"]) [text "↻"];
          ]];
       ]);
@@ -134,6 +137,9 @@ let view =
       let state = BufferList.set_current_buffer state buffer in
       set_state (Some state)
     | None -> Ui_effect.return () in
+  let reload_state set_state =
+    let%bind.Effect data = get_buffer_list () in
+    set_state (BufferList.init_opt data) in
   let%sub on_activate =
     let%arr set_state = set_state in
     let%bind.Effect data = get_buffer_list () in
@@ -144,7 +150,7 @@ let view =
     return loading_view
   | Some model ->
     let%sub buffer_list =
-      bufferlist_to_view ~set_current_buffer:(set_current_buffer) ~set_state model in
+      bufferlist_to_view ~set_current_buffer ~reload_state ~set_state model in
     return buffer_list
 
 let application =
