@@ -2,5 +2,21 @@
  (modes js)
  (libraries
    emacs_data
-   core bonsai bonsai.web async_js)
- (preprocess (pps js_of_ocaml-ppx ppx_here ppx_deriving.show ppx_compare ppx_sexp_conv ppx_fields_conv ppx_let)))
+   core
+   bonsai
+   bonsai.web
+   bonsai.web_ui_common_components
+   async_js
+ )
+ (preprocess
+  (pps
+    ppx_css
+    ppx_string
+    js_of_ocaml-ppx
+    ppx_here
+    ppx_deriving.show
+    ppx_compare
+    ppx_sexp_conv
+    ppx_fields_conv
+    ppx_let
+  )))

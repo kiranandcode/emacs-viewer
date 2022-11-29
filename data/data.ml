@@ -69,3 +69,9 @@ type t =
 
 type buffer_timestamp = { modification_time: int; modification_count: int }
 [@@deriving show, sexp, equal]
+
+let buffer_timestamp_gt t1 t2 =
+  t1.modification_time < t2.modification_time || (
+    t1.modification_time = t2.modification_time &&
+    t1.modification_count < t2.modification_count
+  )

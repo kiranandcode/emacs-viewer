@@ -398,13 +398,19 @@ let org_data =
 
 let org_buffer_data = alist org_data
 
-
 let buffer_timestamp =
   typed_list KV.["modification-time", int; "modification-count", int]
     (fun modification_time modification_count ->
        Data.{modification_time; modification_count}
     )
 
+let buffer_data =
+  typed_list KV.[
+    "buffer-name", string;
+    "modification-time", buffer_timestamp;
+    "buffer-data", org_data
+  ] (fun buffer_name modification_time buffer_data ->
+    (buffer_name, modification_time, buffer_data))
 
 let buffer_list = alist begin
   uncons (fun name ->

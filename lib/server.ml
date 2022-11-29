@@ -9,8 +9,9 @@ let emacs_cmd fmt =
   Format.ksprintf (fun s -> 
     OS.Cmd.run_out Cmd.(emacs % "-e" % s)
     |> OS.Cmd.to_string
-    |> Result.map ~f:Sexplib.Sexp.of_string) fmt
-
+    |> Result.map ~f:Sexplib.Sexp.of_string
+    |> Result.map_error ~f:(fun _ -> `Msg "emacs RPC failed")
+  ) fmt
 
 let collect_todos_cmd = {elisp|
 (progn
@@ -36,8 +37,6 @@ let handle_error v = Lwt.bind v (function
   | Ok v -> Lwt.return v
   | Error (`Msg err) -> Dream.respond ~status:`Internal_Server_Error err)
 
-let state: (string, unit) Base.Hashtbl.t = Hashtbl.create (module String)
-
 module State = struct
   type buffer_data = {
     modification_time: Emacs_data.Data.buffer_timestamp;
@@ -47,6 +46,26 @@ module State = struct
   } [@@deriving sexp, eq, show]
 
   type t = (string, buffer_data option) Hashtbl.t
+
+  let get_buffer_data (t: t) buffer_filename modification_time =
+    match Hashtbl.find t buffer_filename with
+    | Some (Some data as cached_data) when
+        Emacs_data.Data.equal_buffer_timestamp
+          data.modification_time modification_time ->
+      cached_data
+    | _ -> None
+
+  let set_buffer_data (t: t) buffer_filename buffer_data =
+    Hashtbl.update_and_return t buffer_filename ~f:(function
+      | Some (Some cached_data) when
+          Emacs_data.Data.buffer_timestamp_gt
+            buffer_data.modification_time
+            cached_data.modification_time ->
+        (Some cached_data)
+      | _ -> Some buffer_data
+    )
+    |> Option.value_exn ~here:[%here] ~message:"option should always be non-None here"
+
 
   let set_buffer_list (t: t) ls =
     let ls = Hashtbl.of_alist_exn (module String) ls in
@@ -116,9 +135,9 @@ let get_buffer_timestamp buffer_name =
   let%bind data = lift_decoders_error (Org_data.buffer_timestamp sxp) in
   Lwt_result.return data
 
-let get_buffer_data buffer_name =
+let get_buffer_data buffer_filename =
   let open Lwt_result.Let_syntax in
-  let%bind _sxp = Lwt_result.lift @@ emacs_cmd {elisp|
+  let%bind sxp = Lwt_result.lift @@ emacs_cmd {elisp|
 (let ((buffer (find-buffer-visiting "%s")))
   (with-current-buffer buffer
     (let ((visit-time (time-convert (visited-file-modtime) 'integer))
@@ -126,8 +145,16 @@ let get_buffer_data buffer_name =
       (list (buffer-name)
             (list visit-time mod-time)
             (org-element-parse-buffer)))))
-|elisp} buffer_name in
-  Lwt_result.return ()
+|elisp} buffer_filename in
+  let%bind (buffer_name, modification_time, buffer_data) =
+    lift_decoders_error (Org_data.buffer_data sxp) in
+  let data = State.{
+    modification_time;
+    buffer_name;
+    buffer_filename;
+    buffer_data
+  } in
+  Lwt_result.return data
 
 let api_routes =
   let open Lwt_result.Let_syntax in
@@ -145,8 +172,21 @@ let api_routes =
     );
     Dream.post "/buffer" (fun req ->
       handle_error begin
-        let%bind body = Lwt_result.ok @@ Dream.body req in
-        sexp ([%sexp_of: string] body)
+        let%bind buffer_filename = Lwt_result.ok @@ Dream.body req in
+        let%bind timestamp = get_buffer_timestamp buffer_filename
+                             |> Lwt_result.map_error
+                                  (fun _ -> `Msg "Emacs RPC failed - invalid filename?") in
+        let%bind cached_data = Lwt_mutex.with_lock state_lock (fun () ->
+          Lwt_result.return @@ State.get_buffer_data state buffer_filename timestamp
+        ) in
+        let%bind data = match cached_data with
+          | Some data -> Lwt_result.return data
+          | None ->
+            let%bind data = get_buffer_data buffer_filename in
+            Lwt_mutex.with_lock state_lock (fun () ->
+              Lwt_result.return @@ State.set_buffer_data state buffer_filename data;
+            ) in
+        sexp ([%sexp_of: Emacs_data.Data.t list] data.buffer_data)
       end
     )
   ]
