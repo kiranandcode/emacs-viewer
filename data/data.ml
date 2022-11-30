@@ -15,6 +15,12 @@ type tag = string
 type op = Italic | Strikethrough | Bold | Underline | Subscript | Superscript
 [@@deriving show, sexp, equal]
 
+type time = { year: int; month: int; day: int; hour: int option; minute: int option }
+[@@deriving show, sexp, equal]
+
+type timestamp = { raw: string; start: time; end_: time; pos: pos }
+[@@deriving show, sexp, equal]
+
 type txt =
   | Lit of string
   | Concat of txt list
@@ -22,13 +28,9 @@ type txt =
   | Entity of string
   | Format of op * txt
   | InlineSrcBlock of { language: string; value: string }  
+  | Timestamp of timestamp
 [@@deriving show, sexp, equal]
 
-type time = { year: int; month: int; day: int; hour: int option; minute: int option }
-[@@deriving show, sexp, equal]
-
-type timestamp = { raw: string; start: time; end_: time; pos: pos }
-[@@deriving show, sexp, equal]
 
 type todo = {
   keyword: string;

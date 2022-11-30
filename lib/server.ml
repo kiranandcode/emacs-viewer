@@ -1,7 +1,7 @@
 open Core
 module Sexp = Sexplib.Sexp
 
-module Log = (val (Logs.src_log (Logs.Src.create "server")))
+let log = lazy (Dream.sub_log "server")
 
 let emacs = Bos.Cmd.v "emacsclient.emacs"
 let emacs_cmd fmt =
@@ -13,19 +13,13 @@ let emacs_cmd fmt =
     |> Result.map_error ~f:(fun _ -> `Msg "emacs RPC failed")
   ) fmt
 
-let collect_todos_cmd = {elisp|
-(progn
-  (let ((elements nil))
-    (dolist (buffer (org-buffer-list))
-      (with-current-buffer buffer
-        (push (cons (buffer-name) (org-element-parse-buffer)) elements)
-        )
-      )
-    elements))
-|elisp}
 
 let html ?status ?code ?headers s = Lwt_result.ok @@ Dream.html ?status ?code ?headers s
-let sexp ?status ?code ?headers s = Lwt_result.ok @@ Dream.respond ?status ?code ?headers (Sexp.to_string_mach s)
+let sexp ?status ?code ?headers s =
+  let headers = Option.value ~default:[] headers
+              |> List.cons ("Content-Type", "text/plain") in
+  Lwt_result.ok @@
+  Dream.respond ?status ?code ~headers (Sexp.to_string_mach s)
 
 let lift_decoders_error res =
   Lwt_result.lift (
@@ -72,7 +66,7 @@ module State = struct
     Hashtbl.filter_mapi_inplace t ~f:(fun ~key ~data ->
       match Hashtbl.find ls key with
       | None ->
-        Log.debug (fun f -> f "dropping cached buffer %s" key);
+        (let lazy log = log in log).info (fun f -> f "dropping cached buffer %s" key);
         (* buffer is no longer present in emacs; drop it from the server *)
         None
       (* buffer exists *)
@@ -160,6 +154,7 @@ let api_routes =
   let open Lwt_result.Let_syntax in
   Dream.scope "/api" [] [
     Dream.get "/buffers" (fun _ ->
+      (let lazy log = log in log).info (fun f -> f "buffers");
       handle_error begin
         let%bind data = get_buffer_list () in
         let%bind buffer_list = 
@@ -192,7 +187,9 @@ let api_routes =
   ]
 
 let run port =
+  (* Dream.initialize_log ~enable:true ~level:`Debug (); *)
   Dream.run ?port begin
+    Dream.logger @@
     Dream.router [
       api_routes;
 

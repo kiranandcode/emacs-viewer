@@ -16,4 +16,26 @@ Check out src_emacs[:exports code]{buffer-modified-tick} and src_emacs[:exports 
 * TODO Add support to clock out
 * TODO Show running tasks
 * TODO Add option to hide/show hidden tasks
-
+** TODO Add styles for show hidden tasks
+This is some text that is hidden beneath the task
+#+begin_src ocaml
+  let x = 10 in
+  x + 10
+#+end_src
+This is some text that is some more text beneath a drop box
+** Random code work do not do things
+*** TODO Kill me
+*** TODO Epic
+**** TODO Awesome bro                      :high:profile:random:code:awesome:
+SCHEDULED: <2022-11-30 Wed>
+:PROPERTIES:
+:HOURS:    10
+:END:
+**** TODO Sad bro
+  :PROPERTIES:
+  :COLUMNS:  %80ITEM(Title) %6HOURS(Hours){+}
+  :ARCHIVE_TIME: 2022-11-23 Wed 05:22
+  :ARCHIVE_FILE: ~/org/final-grading-schedule.org
+  :ARCHIVE_CATEGORY: final-grading-schedule
+  :END:
+***** TODO <2022-07-25 Mon> Sappy bro

@@ -1,4 +1,130 @@
-html {
-    background: black;
-    color: white
+/* html { */
+/*     background: black; */
+/*     color: white */
+/* } */
+
+.org-mode-headline-contents {
+  display: flex;
+  flex-direction: column;
+}
+.org-mode-title {
+  display: flex;
+  flex-direction: row;
+}
+.org-mode-current-buffer {
+  max-width: 80%;
+  margin-left: auto;
+  margin-right: auto;
+}
+.org-mode-title-todo {
+  display: flex;
+  align-items: flex-start;
+}
+.org-mode-title-text {
+  display: flex;
+  flex-wrap: wrap;
+}
+.org-mode-title-text div, .org-mode-title-text p, .org-mode-title-text pre {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-left: 5px;
+  margin-right: 5px;
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+.org-mode-timestamp {
+  display: flex;
+}
+.org-mode-timestamp .org-time {
+  margin-left: 5px;
+  margin-right: 5px;
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+.org-mode-timestamp p {
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+.org-mode-children.org-mode-headline-childen {
+  margin-left: 20pt;
+}
+.org-mode-headline {
+  background: #cccccc73;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  padding: 5px;
+}
+.org-mode-todo-done {
+  background: #574ebf;
+  color: white;
+}
+.org-mode-todo.org-mode-todo-todo {
+  background: #ff3838;
+  color: white;
+}
+.org-mode-todo {
+  padding: 5px;
+  font-weight: bold;
+}
+
+.org-time {
+  font-weight: lighter;
+  font-size: small;
+  color: #333332;
+}
+
+.navigation-bar {
+  display: flex;
+  justify-content: space-around;
+  max-width: 80%;
+  margin-left: auto;
+  margin-right: auto;
+  /*! overflow-x: scroll; */
+  background: #e9d4f2;
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+.buffer-list .navigation-button {
+  margin-left: 5px;
+  margin-right: 5px;
+  display: flex;
+  align-items: center;
+  background: #eaeaea;
+  text-align: center;
+  padding: 5px;
+}
+
+.navigation-button > a {
+  width: 100%;
+}
+
+.buffer-list {
+  display: flex;
+  overflow-x: scroll;
+  max-width: 95%;
+  width: 100%;
+}
+
+.navigation-buttons {
+  display: flex;
+  align-items: center;
+  width: 5%;
+  justify-content: center;
+}
+
+.org-mode-tags p {
+  margin-top: 0;
+  margin-bottom: 0;
+  margin-left: 5px;
+  margin-right: 5px;
+  color: #50576a;
+  font-weight: lighter;
+}
+.org-mode-tags {
+  display: flex;
+  flex-wrap: wrap;
+  margin-left: 10px;
+  margin-right: 10px;
 }

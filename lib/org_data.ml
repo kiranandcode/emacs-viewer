@@ -204,6 +204,9 @@ let rec txt =
   | Sexp.List (Atom "superscript" :: _ :: rest) ->
     let+ rest = txt (List rest) in
     Ok (Data.Format (Superscript, rest))
+  | Sexp.List (Atom "timestamp" :: _) as sexp ->
+    let+ timestamp = timestamp sexp in
+    Ok (Data.Timestamp timestamp)
   | Sexp.List (Atom "code" :: prop_list :: []) ->
     let+ prop_list = property_list_opt string prop_list in
     let+ value = List.Assoc.find ~equal:String.equal prop_list ":value"
