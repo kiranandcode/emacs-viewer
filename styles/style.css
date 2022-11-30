@@ -128,3 +128,14 @@
   margin-left: 10px;
   margin-right: 10px;
 }
+
+.org-text-stats-cookie {
+  font-weight: bold;
+  color: #160c8c;
+}
+.org-property {
+  display: none;
+}
+.org-mode-drawer {
+  display: none;
+}

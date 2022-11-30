@@ -29,6 +29,7 @@ type txt =
   | Format of op * txt
   | InlineSrcBlock of { language: string; value: string }  
   | Timestamp of timestamp
+  | StatisticsCookie of string
 [@@deriving show, sexp, equal]
 
 

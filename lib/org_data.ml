@@ -207,6 +207,12 @@ let rec txt =
   | Sexp.List (Atom "timestamp" :: _) as sexp ->
     let+ timestamp = timestamp sexp in
     Ok (Data.Timestamp timestamp)
+  | Sexp.List (Atom "statistics-cookie" :: prop_list :: []) ->
+    let+ prop_list = property_list_opt string prop_list in
+    let+ value = List.Assoc.find ~equal:String.equal prop_list ":value"
+                 |> Result.of_option
+                      ~error:(derr "failed to find value binding for stats cookie") in
+    Ok (Data.StatisticsCookie value)
   | Sexp.List (Atom "code" :: prop_list :: []) ->
     let+ prop_list = property_list_opt string prop_list in
     let+ value = List.Assoc.find ~equal:String.equal prop_list ":value"

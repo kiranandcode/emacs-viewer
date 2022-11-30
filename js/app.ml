@@ -98,12 +98,14 @@ let rec render_text (txt: Emacs_data.Data.txt) =
   | Emacs_data.Data.Concat elts ->
     let elts = List.map ~f:render_text elts in
     div elts
+  | Emacs_data.Data.StatisticsCookie txt ->
+    p ~attr:(Vdom.Attr.class_ "org-text-stats-cookie") [text txt]
   | Emacs_data.Data.Code cde ->
     pre [text cde]
   | Emacs_data.Data.Verbatim verb ->
     pre [text verb]
   | Emacs_data.Data.Entity ent ->
-    p [text ent]
+    p ~attr:(Vdom.Attr.class_ "org-text-entity") [text ent]
   | Emacs_data.Data.Format (fmt, t) ->
     div ~attr:(Vdom.Attr.class_ (to_class fmt)) [render_text t]
   | Emacs_data.Data.InlineSrcBlock { language; value } ->
