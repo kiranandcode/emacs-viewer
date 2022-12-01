@@ -31,12 +31,30 @@ CLOSED: [2022-12-01 Thu 12:22]
 :LOGBOOK:
 CLOCK: [2022-12-01 Thu 11:31]--[2022-12-01 Thu 12:22] =>  0:51
 :END:
-* TODO Add button to show folding
-** TODO Hide folding buttons on subsections empty 
-* TODO Add button to open in emacs
-** TODO update server to have an endpoint that takes in buffer & timestamp - return none if no change
-** TODO refresh code on clock edge
+* DONE Add button to show folding
+CLOSED: [2022-12-01 Thu 23:12]
+** DONE Hide folding buttons on subsections empty 
+CLOSED: [2022-12-01 Thu 23:12]
+* DONE Fix buffer loading to keep current buffer
+CLOSED: [2022-12-02 Fri 01:15]
+:LOGBOOK:
+CLOCK: [2022-12-02 Fri 01:13]--[2022-12-02 Fri 01:15] =>  0:02
+:END:
+* DONE Add button to open in emacs
+CLOSED: [2022-12-02 Fri 01:35]
+** DONE update server to have an endpoint that takes in buffer & timestamp - return none if no change
+CLOSED: [2022-12-02 Fri 01:12]
+** DONE Update reload button to reload
+CLOSED: [2022-12-02 Fri 01:31]
+** DONE refresh code on clock edge
+CLOSED: [2022-12-02 Fri 01:35]
 * TODO Add button to task to open-in-emacs, on click on button, send request to server, server send request to emacs
+:LOGBOOK:
+CLOCK: [2022-12-01 Fri 17:41]
+:END:
+** TODO write elisp code to open window to position
+** TODO add endpoint to open in emacs
+** TODO 
 * TODO Add support to clock in
 * TODO Add support to clock out
 * DONE Show running tasks

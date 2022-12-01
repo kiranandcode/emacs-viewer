@@ -5,12 +5,16 @@ open Bonsai.Let_syntax
 
 module Buffer = struct
   type t = {
+    timestamp: Emacs_data.Data.buffer_timestamp;
+    buffer_filename: string;
     elements: Emacs_data.Data.t list
   } [@@deriving sexp, fields, equal]
 
   let init_opt data = match data with
-    | Ok data -> Some {elements=data}
+    | Ok (filename, data, timestamp) -> Some {buffer_filename=filename;elements=data;timestamp}
     | Error _ -> None
+
+
 end
 
 module BufferList = struct
@@ -20,9 +24,9 @@ module BufferList = struct
     current_buffer: Buffer.t option;
   } [@@deriving sexp, fields, equal]
 
-  let init_opt data =
+  let init_opt ?current_buffer data =
     match data with
-    | Ok data -> Some {buffers=data; current_buffer=None}
+    | Ok data -> Some {buffers=data; current_buffer}
     | Error _ -> None
 
   let set_current_buffer t buffer =
@@ -518,6 +522,7 @@ let tagged_search_bar =
 
 
 let bufferlist_to_view ~set_current_buffer ~set_state ~reload_state
+      ~reload_current_buffer
       (model: BufferList.t Value.t) : Vdom.Node.t Computation.t =
   let%sub current_buffer = return (Value.map ~f:BufferList.current_buffer model) in
   let%sub (search_text, tags, clear_input, add_tag), search_bar = tagged_search_bar in
@@ -554,6 +559,10 @@ let bufferlist_to_view ~set_current_buffer ~set_state ~reload_state
         [Vdom.Node.text "🕓"];
     ] in
 
+  let%sub reload_buffer_action =
+    let%arr model = model and set_state = set_state in
+    reload_current_buffer set_state model in
+  let%sub () = Bonsai.Clock.every [%here] (Time_ns.Span.of_sec 2.) reload_buffer_action in
   let%arr buffers = Value.map ~f:BufferList.buffers model
   and current_buffer = current_buffer_view
   and model = model 
@@ -579,14 +588,16 @@ let bufferlist_to_view ~set_current_buffer ~set_state ~reload_state
     let navigation_bar =
       navigation_bar_view
         (set_current_buffer set_state model)
-        (fun () -> reload_state set_state)
+        (fun () -> reload_state set_state model)
         buffers in
     div ~attr:(Vdom.Attr.class_ "main") [
       navigation_bar;
       div ~attr:(Vdom.Attr.classes ["configuration-bar"; "centered-column"]) [
         div ~attr:(Vdom.Attr.class_ "configuration-buttons") [
           div ~attr:(Vdom.Attr.class_ "configuration-button") [
-            a [text "↻"];
+            a ~attr:(Vdom.Attr.on_click (fun _ ->
+              reload_current_buffer set_state model
+            )) [text "↻"];
           ];
           only_clocked_button;
           hide_completed_button
@@ -604,26 +615,69 @@ let bufferlist_to_view ~set_current_buffer ~set_state ~reload_state
       current_buffer
     ]
 
+let get_buffer_list_def () =
+  Async_kernel.Deferred.map
+    ~f:(fun s ->
+      Or_error.map ~f:(fun s ->
+        [%of_sexp: (string * string option) list] @@
+        Sexp.of_string s
+      ) s)
+    (Async_js.Http.get "/api/buffers")  
+
+let get_buffer_def name =
+  Async_kernel.Deferred.map
+    ~f:(fun s ->
+      Or_error.map ~f:(fun s ->
+        let (data, timestamp) =
+          [%of_sexp: Emacs_data.Data.t list * Emacs_data.Data.buffer_timestamp] @@
+          Sexp.of_string s in
+        (name, data, timestamp)
+      ) s)
+    (Async_js.Http.post ~body:(String name) "/api/buffer/load")
+
+let reload_buffer_def data =
+  let data = [%sexp_of: (string *
+                         Emacs_data.Data.buffer_timestamp)] data
+           |> Sexp.to_string_mach in
+  Async_kernel.Deferred.map
+    ~f:(fun s ->
+      Or_error.map ~f:(fun s ->
+        [%of_sexp:
+          (Emacs_data.Data.t list *
+           Emacs_data.Data.buffer_timestamp) option] @@
+        Sexp.of_string s
+      ) s)
+    (Async_js.Http.post ~body:(String data) "/api/buffer/reload")
+
+let reload_buffer_list_def current_buffer_name =
+  let open Async_kernel.Deferred.Result.Let_syntax in
+  let%bind buffer_list = get_buffer_list_def () in
+  let new_current_buffer =
+    match current_buffer_name with
+    | Some current_buffer_name when
+        List.exists ~f:(fun (filename, _) ->
+          String.equal current_buffer_name filename)
+          buffer_list ->
+     Some current_buffer_name
+    | _ -> Option.map ~f:fst (List.hd buffer_list) in
+  match new_current_buffer with
+  | None -> Async_kernel.Deferred.Result.return (buffer_list, None)
+  | Some current_buffer_name ->
+    let%bind data = get_buffer_def current_buffer_name in
+    Async_kernel.Deferred.Result.return
+      (buffer_list, Some data)
+
 let get_buffer_list =
-  Bonsai_web.Effect.of_deferred_fun (fun () -> 
-    Async_kernel.Deferred.map
-      ~f:(fun s ->
-        Or_error.map ~f:(fun s ->
-          [%of_sexp: (string * string option) list] @@
-          Sexp.of_string s
-        ) s)
-      (Async_js.Http.get "/api/buffers"))
+  Bonsai_web.Effect.of_deferred_fun get_buffer_list_def
+
+let reload_buffer_list =
+  Bonsai_web.Effect.of_deferred_fun reload_buffer_list_def
 
 let get_buffer =
-  Bonsai_web.Effect.of_deferred_fun (fun name ->
-    Async_kernel.Deferred.map
-      ~f:(fun s ->
-        Or_error.map ~f:(fun s ->
-          [%of_sexp: Emacs_data.Data.t list] @@
-          Sexp.of_string s
-        ) s)
-      (Async_js.Http.post ~body:(String name) "/api/buffer")
-  )
+  Bonsai_web.Effect.of_deferred_fun get_buffer_def
+
+let reload_buffer =
+  Bonsai_web.Effect.of_deferred_fun reload_buffer_def
 
 let view =
   let%sub state, set_state = Bonsai.state_opt [%here] (module BufferList) in
@@ -634,9 +688,26 @@ let view =
       let state = BufferList.set_current_buffer state buffer in
       set_state (Some state)
     | None -> Ui_effect.return () in
-  let reload_state set_state =
-    let%bind.Effect data = get_buffer_list () in
-    set_state (BufferList.init_opt data) in
+  let reload_current_buffer set_state buffer_list =
+    match buffer_list.BufferList.current_buffer with
+    | None -> Ui_effect.return ()
+    | Some current_buffer ->
+      let buffer_name = current_buffer.Buffer.buffer_filename in
+      let buffer_timestamp = current_buffer.Buffer.timestamp in
+      let%bind.Effect data = reload_buffer (buffer_name, buffer_timestamp) in
+      match Result.map ~f:(Option.bind ~f:(fun (d,t) -> Buffer.init_opt (Ok (buffer_name,d,t)))) data with
+      | Ok (Some current_buffer) ->
+        let state = BufferList.set_current_buffer buffer_list current_buffer in
+        set_state (Some state)
+      | _ -> Ui_effect.return () in
+  let reload_state set_state buffer_list =
+    let%bind.Effect data = reload_buffer_list (Option.map ~f:Buffer.buffer_filename buffer_list.BufferList.current_buffer) in
+    match data with
+    | Ok (buffer_list, current_buffer) ->
+      let current_buffer = Buffer.init_opt (Result.of_option ~error:() current_buffer) in
+      set_state (BufferList.init_opt ?current_buffer (Ok buffer_list))
+    | Error _ ->
+      Ui_effect.return () in
   let%sub on_activate =
     let%arr set_state = set_state in
     let%bind.Effect data = get_buffer_list () in
@@ -647,7 +718,7 @@ let view =
     return loading_view
   | Some model ->
     let%sub buffer_list =
-      bufferlist_to_view ~set_current_buffer ~reload_state ~set_state model in
+      bufferlist_to_view ~set_current_buffer ~reload_current_buffer ~reload_state ~set_state model in
     return buffer_list
 
 let application =

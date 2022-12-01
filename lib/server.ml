@@ -165,7 +165,7 @@ let api_routes =
         sexp ([%sexp_of: (string * string option) list] buffer_list)
       end
     );
-    Dream.post "/buffer" (fun req ->
+    Dream.post "/buffer/load" (fun req ->
       handle_error begin
         let%bind buffer_filename = Lwt_result.ok @@ Dream.body req in
         let%bind timestamp = get_buffer_timestamp buffer_filename
@@ -181,9 +181,41 @@ let api_routes =
             Lwt_mutex.with_lock state_lock (fun () ->
               Lwt_result.return @@ State.set_buffer_data state buffer_filename data;
             ) in
-        sexp ([%sexp_of: Emacs_data.Data.t list] data.buffer_data)
+        sexp ([%sexp_of:
+               Emacs_data.Data.t list *
+               Emacs_data.Data.buffer_timestamp]
+                (data.buffer_data, data.modification_time))
       end
-    )
+    );
+    Dream.post "/buffer/reload" (fun req ->
+      handle_error begin
+        let%bind buffer_data = Lwt_result.ok @@ Dream.body req in
+        let%bind buffer_filename, client_timestamp =
+          Result.try_with (fun () -> [%of_sexp: (string * Emacs_data.Data.buffer_timestamp)] (Sexp.of_string buffer_data))
+          |> Result.map_error ~f:(fun err -> `Msg ("Invalid data: " ^ Exn.to_string err))
+          |> Lwt.return in
+        let%bind last_modified_timestamp = get_buffer_timestamp buffer_filename
+                             |> Lwt_result.map_error
+                                  (fun _ -> `Msg "Emacs RPC failed - invalid filename?") in
+        if Emacs_data.Data.buffer_timestamp_gt client_timestamp last_modified_timestamp
+        then begin
+          let%bind cached_data = Lwt_mutex.with_lock state_lock (fun () ->
+            Lwt_result.return @@ State.get_buffer_data state buffer_filename last_modified_timestamp
+          ) in
+          let%bind data = match cached_data with
+            | Some data -> Lwt_result.return data
+            | None ->
+              let%bind data = get_buffer_data buffer_filename in
+              Lwt_mutex.with_lock state_lock (fun () ->
+                Lwt_result.return @@ State.set_buffer_data state buffer_filename data;
+              ) in
+          sexp ([%sexp_of: (Emacs_data.Data.t list * Emacs_data.Data.buffer_timestamp) option]
+                  (Some (data.buffer_data, data.modification_time)))
+        end
+        else sexp ([%sexp_of: (Emacs_data.Data.t list * Emacs_data.Data.buffer_timestamp) option]
+                     None)
+      end
+    )    
   ]
 
 let run port =
