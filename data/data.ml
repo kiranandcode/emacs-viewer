@@ -21,6 +21,20 @@ type time = { year: int; month: int; day: int; hour: int option; minute: int opt
 type timestamp = { raw: string; start: time; end_: time; pos: pos }
 [@@deriving show, sexp, equal]
 
+let time_to_time_ns ts =
+  let (let+) x f = Option.bind x ~f in
+  let+ month = Month.of_int ts.month in
+  let+ date = try
+      Some (Date.create_exn ~y:ts.year ~m:month ~d:ts.day)
+    with Invalid_argument _ -> None in
+  let time = Time_ns.Ofday.create
+               ~hr:(Option.value ~default:0 ts.hour)
+               ~min:(Option.value ~default:0 ts.minute) () in
+  Some (Time_ns.of_date_ofday
+          ~zone:(Timezone.utc)
+          date
+          time)
+
 type txt =
   | Lit of string
   | Concat of txt list

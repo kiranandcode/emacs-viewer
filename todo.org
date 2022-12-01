@@ -7,35 +7,39 @@ CLOSED: [2022-11-23 Wed 10:09]
 * DONE Write elisp code to get last modified + changes timestamp for buffer for refreshing agenda view 
 CLOSED: [2022-11-23 Wed 10:09]
 Check out src_emacs[:exports code]{buffer-modified-tick} and src_emacs[:exports code]{visited-file-modtime}
-* TODO On load to home, collect org buffer names, select first and redirect to =/buffer/buffer-name=
-* TODO Use parameter =/buffer/buffer-name= to collect buffer-name or redirect to first valid buffer name
-* TODO Render names of all buffers at top of website, on click take to respective page
-* TODO Render tasks in list
+* DONE On load to home, collect org buffer names, select first and redirect to =/buffer/buffer-name=
+CLOSED: [2022-12-01 Thu 03:31]
+* DONE Use parameter =/buffer/buffer-name= to collect buffer-name or redirect to first valid buffer name
+CLOSED: [2022-12-01 Thu 03:31]
+* DONE Render names of all buffers at top of website, on click take to respective page
+CLOSED: [2022-12-01 Thu 03:31]
+* DONE Render tasks in list
+CLOSED: [2022-12-01 Thu 03:31]
+* DONE Add on click of element fold
+CLOSED: [2022-12-01 Thu 05:42]
+* DONE Add filtering panel at top of screen                       :immediate:
+CLOSED: [2022-12-01 Thu 10:16]
+:LOGBOOK:
+CLOCK: [2022-12-01 Thu 05:43]--[2022-12-01 Thu 05:44] =>  0:01
+:END:
+* DONE Add filter for completed tasks
+CLOSED: [2022-12-01 Thu 11:30]
+* DONE Add filter for clocked tasks
+CLOSED: [2022-12-01 Thu 11:30]
+* DONE Add button to show clock duration for tasks with active clock
+CLOSED: [2022-12-01 Thu 12:22]
+:LOGBOOK:
+CLOCK: [2022-12-01 Thu 11:31]--[2022-12-01 Thu 12:22] =>  0:51
+:END:
+* TODO Add button to show folding
+** TODO Hide folding buttons on subsections empty 
+* TODO Add button to open in emacs
+** TODO update server to have an endpoint that takes in buffer & timestamp - return none if no change
+** TODO refresh code on clock edge
 * TODO Add button to task to open-in-emacs, on click on button, send request to server, server send request to emacs
 * TODO Add support to clock in
 * TODO Add support to clock out
-* TODO Show running tasks
-* TODO Add option to hide/show hidden tasks
-** TODO Add styles for show hidden tasks
-This is some text that is hidden beneath the task
-#+begin_src ocaml
-  let x = 10 in
-  x + 10
-#+end_src
-This is some text that is some more text beneath a drop box
-** Random code work do not do things
-*** TODO Kill me
-*** TODO Epic
-**** TODO Awesome bro                      :high:profile:random:code:awesome:
-SCHEDULED: <2022-11-30 Wed>
-:PROPERTIES:
-:HOURS:    10
-:END:
-**** TODO Sad bro
-  :PROPERTIES:
-  :COLUMNS:  %80ITEM(Title) %6HOURS(Hours){+}
-  :ARCHIVE_TIME: 2022-11-23 Wed 05:22
-  :ARCHIVE_FILE: ~/org/final-grading-schedule.org
-  :ARCHIVE_CATEGORY: final-grading-schedule
-  :END:
-***** TODO <2022-07-25 Mon> Sappy bro
+* DONE Show running tasks
+CLOSED: [2022-12-01 Thu 13:02]
+* DONE Add option to hide/show hidden tasks
+CLOSED: [2022-12-01 Thu 13:02]

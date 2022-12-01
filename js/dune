@@ -7,6 +7,8 @@
    bonsai.web
    bonsai.web_ui_common_components
    async_js
+   fuzzy_match
+   timezone
  )
  (preprocess
   (pps
