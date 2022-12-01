@@ -276,20 +276,15 @@ let rec data_to_view ~hide_completed ~only_clocked  ~search_text ~filter_tags ~a
               (Emacs_data.Data.time_to_time_ns time.start)
               (Emacs_data.Data.time_to_time_ns time.end_) 
         else return (Value.return None) in
-      let subsections = Bonsai.lazy_ @@
-        lazy (mapM ~f:(data_to_view ~only_clocked ~hide_completed ~search_text ~filter_tags ~add_tag) subsections) in
-      let%sub fold_button =
-        if%sub should_fold
-        then return (Value.return "˅")
-        else return (Value.return "᠁") in
-      let%sub fold_button_class =
-        if%sub should_fold
-        then return (Value.return "fold-action-folded")
-        else return (Value.return "fold-action-unfolded") in
-      let%sub subsections =
-        if%sub should_fold then return (Value.return []) else subsections in
-
       let%sub fold_buttons_panel =
+        let%sub fold_button =
+          if%sub should_fold
+          then return (Value.return "˅")
+          else return (Value.return "᠁") in
+        let%sub fold_button_class =
+          if%sub should_fold
+          then return (Value.return "fold-action-folded")
+          else return (Value.return "fold-action-unfolded") in
         let%arr subsections = subsections
         and toggle_fold = set_should_fold
         and fold_button = fold_button
@@ -305,6 +300,12 @@ let rec data_to_view ~hide_completed ~only_clocked  ~search_text ~filter_tags ~a
               Vdom.Node.(a [text fold_button]);
             ];
           ]] in
+      let subsections = Bonsai.lazy_ @@
+        lazy (mapM ~f:(data_to_view
+                         ~only_clocked ~hide_completed
+                         ~search_text ~filter_tags ~add_tag) subsections) in
+      let%sub subsections =
+        if%sub should_fold then return (Value.return []) else subsections in
       let%arr subsections = subsections
       and title = title
       and level = level
@@ -330,7 +331,7 @@ let rec data_to_view ~hide_completed ~only_clocked  ~search_text ~filter_tags ~a
                (match todo with
                 | None -> []
                 | Some todo ->
-                 [adiv ~cls:["org-mode-title-todo"] [render_todo todo]]);
+                  [adiv ~cls:["org-mode-title-todo"] [render_todo todo]]);
                [adiv ~cls:["org-mode-title-text"] [render_text title]];
                (match clock_run_time with
                 | None -> []
