@@ -131,6 +131,11 @@ let nillable decoder = function
   | Sexp.Atom "nil" -> Ok None
   | sexp -> decoder sexp |> Result.map ~f:Option.some
 
+let nillable_list decoder = function
+  | Sexp.Atom "nil" -> Ok []
+  | sexp -> decoder sexp
+
+
 let todo_keyword = function
   | Sexp.List [Atom "#"; List (Atom keyword :: _)] -> Ok keyword
   | context -> err ~context "expected literal text for todo keyword"
@@ -421,10 +426,9 @@ let buffer_data =
   ] (fun buffer_name modification_time buffer_data ->
     (buffer_name, modification_time, buffer_data))
 
-let buffer_list = alist begin
+let buffer_list = nillable_list @@ alist begin
   uncons (fun name ->
     buffer_timestamp >|= Tuple2.create name) string
-
 end
 
 let run decoder s = D.decode_value decoder s
