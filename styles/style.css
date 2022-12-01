@@ -92,8 +92,6 @@
 .org-mode-section-fold-buttons {
   display: flex;
   justify-content: flex-end;
-  font-size: large;
-  height: 0.5em;
 }
 
 .org-mode-section-action-buttons {
