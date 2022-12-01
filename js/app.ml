@@ -288,16 +288,31 @@ let rec data_to_view ~hide_completed ~only_clocked  ~search_text ~filter_tags ~a
         else return (Value.return "fold-action-unfolded") in
       let%sub subsections =
         if%sub should_fold then return (Value.return []) else subsections in
+
+      let%sub fold_buttons_panel =
+        let%arr subsections = subsections
+        and toggle_fold = set_should_fold
+        and fold_button = fold_button
+        and fold_button_class = fold_button_class in
+        if List.is_empty subsections
+        then []
+        else [
+          adiv ~cls:["org-mode-section-fold-buttons"] [
+            Vdom.Node.div ~attr:(Vdom.Attr.many_without_merge [
+              Vdom.Attr.on_click (fun _ -> toggle_fold ());
+              Vdom.Attr.classes ["org-mode-section-button"; fold_button_class]
+            ]) [
+              Vdom.Node.(a [text fold_button]);
+            ];
+          ]] in
       let%arr subsections = subsections
       and title = title
       and level = level
       and tags = tags
       and todo = todo
-      and toggle_fold = set_should_fold
       and add_tag = add_tag
       and clock_run_time = clock_run_time
-      and fold_button = fold_button
-      and fold_button_class = fold_button_class in
+      and fold_buttons_panel = fold_buttons_panel in
       Vdom.Node.div
         ~attr:Vdom.Attr.(many_without_merge [
           classes ["org-mode-headline"; ("org-mode-headline-" ^ Int.to_string level)];
@@ -321,21 +336,13 @@ let rec data_to_view ~hide_completed ~only_clocked  ~search_text ~filter_tags ~a
                 | None -> []
                 | Some run_time ->
                   [adiv ~cls:["org-mode-title-clock"] [Vdom.Node.text run_time]]);
-               [adiv ~cls:["org-mode-section-buttons"] [
+               [adiv ~cls:["org-mode-section-buttons"] ([
                   adiv ~cls:["org-mode-section-action-buttons"] [
                     adiv ~cls:["org-mode-section-button"] [ Vdom.Node.(a [text "📂"]); ];
                     adiv ~cls:["org-mode-section-button"] [ Vdom.Node.(a [text "🕓"]); ];
                     adiv ~cls:["org-mode-section-button"] [ Vdom.Node.(a [text "🞋"]); ];
                   ];
-                  adiv ~cls:["org-mode-section-fold-buttons"] [
-                    Vdom.Node.div ~attr:(Vdom.Attr.many_without_merge [
-                      Vdom.Attr.on_click (fun _ -> toggle_fold ());
-                      Vdom.Attr.classes ["org-mode-section-button"; fold_button_class]
-                    ]) [
-                      Vdom.Node.(a [text fold_button]);
-                    ];
-                  ]
-                ]]
+                ] @ fold_buttons_panel)]
              ]);
           adiv ~cls:["org-mode-section-details"] [
             adiv ~cls:["org-mode-tags"] (List.map ~f:(fun v ->
