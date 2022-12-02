@@ -3,9 +3,26 @@
 A web frontend for your Org files! (100% faithful to GNU+Emacs!)
 
 ## Screenshots
+![intro_gif](https://codeberg.org/gopiandcode/emacs-viewer/raw/branch/master/images/intro-gif.gif)
 
 Damn, feels good to be FREE (AGPL3+).
 
+Awesome features!
+
+- Live updating:
+![live_updating](https://codeberg.org/gopiandcode/emacs-viewer/raw/branch/master/images/live-updating.gif)
+
+- Clocking support:
+![clocking_support](https://codeberg.org/gopiandcode/emacs-viewer/raw/branch/master/images/clocking-support.gif)
+
+- Filtering by completed tasks:
+![completed_tasks](https://codeberg.org/gopiandcode/emacs-viewer/raw/branch/master/images/completed-tasks.gif)
+
+- Full text search over org headlines:
+![full_text_search](https://codeberg.org/gopiandcode/emacs-viewer/raw/branch/master/images/full-text-search.gif)
+
+- Filtering by tags :
+![tag_filtering](https://codeberg.org/gopiandcode/emacs-viewer/raw/branch/master/images/tag-support.gif)
 
 ## Project setup
 
