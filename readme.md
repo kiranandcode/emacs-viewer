@@ -1,28 +1,29 @@
+***NOTE: THIS IS A MIRROR, REAL DEVELOPMENT HAPPENS ON https://codeberg.org/gopiandcode/emacs-viewer***
 # Emacs Viewer
 
 A web frontend for your Org files! (100% faithful to GNU+Emacs!)
 
 ## Screenshots
-![intro_gif](https://codeberg.org/gopiandcode/emacs-viewer/raw/branch/master/images/intro-gif.gif)
+![intro_gif](https://raw.githubusercontent.com/Gopiandcode/emacs-viewer/master/images/intro-gif.gif)
 
 Damn, feels good to be FREE (AGPL3+).
 
 Awesome features!
 
 - Live updating:
-![live_updating](https://codeberg.org/gopiandcode/emacs-viewer/raw/branch/master/images/live-updating.gif)
+![live_updating](https://raw.githubusercontent.com/Gopiandcode/emacs-viewer/master/images/live-updating.gif)
 
 - Clocking support:
-![clocking_support](https://codeberg.org/gopiandcode/emacs-viewer/raw/branch/master/images/clocking-support.gif)
+![clocking_support](https://raw.githubusercontent.com/Gopiandcode/emacs-viewer/master/images/clocking-support.gif)
 
 - Filtering by completed tasks:
-![completed_tasks](https://codeberg.org/gopiandcode/emacs-viewer/raw/branch/master/images/completed-tasks.gif)
+![completed_tasks](https://raw.githubusercontent.com/Gopiandcode/emacs-viewer/master/images/completed-tasks.gif)
 
 - Full text search over org headlines:
-![full_text_search](https://codeberg.org/gopiandcode/emacs-viewer/raw/branch/master/images/full-text-search.gif)
+![full_text_search](https://raw.githubusercontent.com/Gopiandcode/emacs-viewer/master/images/full-text-search.gif)
 
 - Filtering by tags :
-![tag_filtering](https://codeberg.org/gopiandcode/emacs-viewer/raw/branch/master/images/tag-support.gif)
+![tag_filtering](https://raw.githubusercontent.com/Gopiandcode/emacs-viewer/master/images/tag-support.gif)
 
 ## Project setup
 Emacs_viewer requires OCaml 4.14.0 to build, to install the project dependencies, simply run:
