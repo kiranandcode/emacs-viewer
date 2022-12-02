@@ -5,15 +5,13 @@
    core
    bonsai
    bonsai.web
-   bonsai.web_ui_common_components
    async_js
    fuzzy_match
    timezone
+   re
  )
  (preprocess
   (pps
-    ppx_css
-    ppx_string
     js_of_ocaml-ppx
     ppx_here
     ppx_deriving.show

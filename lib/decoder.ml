@@ -429,5 +429,4 @@ let buffer_list = nillable_list @@ alist begin
     buffer_timestamp >|= Tuple2.create name) string
 end
 
-let run decoder s = D.decode_value decoder s
-  
+let run decoder s = D.decode_value decoder s  

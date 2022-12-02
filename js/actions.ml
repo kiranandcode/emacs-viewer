@@ -58,7 +58,6 @@ let run_action_def (data: string * Emacs_data.buffer_timestamp * int *
   let data = [%sexp_of: (string * Emacs_data.buffer_timestamp * int *
                          [`clock_in | `clock_out | `change_todo | `open_in_emacs ])] data
              |> Sexplib.Sexp.to_string_mach in
-  print_endline ("running action: "^ data);
   Async_kernel.Deferred.map
     ~f:(fun s ->
       Or_error.map ~f:(fun s ->

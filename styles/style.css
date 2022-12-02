@@ -145,7 +145,7 @@
 .navigation-bar {
   display: flex;
   justify-content: space-around;
-  background: #e9d4f2;
+  background: #c4c4c4;
   padding-top: 5px;
   padding-bottom: 5px;
 }
@@ -169,6 +169,7 @@
   overflow-x: scroll;
   max-width: 95%;
   width: 100%;
+  padding-bottom: 5px;
 }
 
 .navigation-buttons {

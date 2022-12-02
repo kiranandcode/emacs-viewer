@@ -95,4 +95,5 @@ CLOSED: [2022-12-02 Fri 10:56]
 CLOSED: [2022-12-02 Fri 11:17]
 ** DONE If start and end time dates are the same and differing times, display first date, and draw both times with line between them <2022-12-02 Fri 02:30-03:30>
 CLOSED: [2022-12-02 Fri 11:17]
-* TODO Add warnings panel
+* DONE Add warnings panel
+CLOSED: [2022-12-02 Fri 12:17]

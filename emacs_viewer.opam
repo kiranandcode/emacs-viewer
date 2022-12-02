@@ -4,17 +4,35 @@ synopsis: "Web viewer integration for Emacs"
 description: "Web viewer integration for Emacs"
 maintainer: ["gopiandcode"]
 authors: ["gopiandcode"]
-license: "AGPLv3.0+"
-tags: ["topics" "emacs" "web" "view"]
+license: "AGPL-3.0-or-later"
+tags: ["emacs" "web" "view"]
+homepage: "https://codeberg.org/gopiandcode/emacs-viewer"
+bug-reports: "https://codeberg.org/gopiandcode/emacs-viewer/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.4"}
+  "core"
+  "re"
+  "sexplib"
   "dream"
-  "note"
-  "brr"
-  "unix"
+  "cmdliner"
+  "decoders"
+  "decoders-sexplib"
+  "bonsai"
+  "fuzzy_match"
+  "timezone"
+  "async_js"
+  "ppx_here"
+  "ppx_compare"
+  "ppx_let"
+  "ppx_sexp_conv"
+  "ppx_fields_conv"
+  "ppx_deriving"
+  "ppx_blob"
+  "bos"
   "odoc" {with-doc}
 ]
+depopts: ["inotify" "core_unix" "ptime"]
 build: [
   ["dune" "subst"] {dev}
   [

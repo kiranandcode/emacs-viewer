@@ -2,5 +2,6 @@
  (name emacs_viewer)
  (libraries
    emacs_data
-   core dream bos incr_dom decoders decoders-sexplib)
- (preprocess (pps ppx_here ppx_deriving.std ppx_let ppx_sexp_conv)))
+   core dream bos decoders decoders-sexplib)
+ (preprocessor_deps ../styles/style.css ../js/app.bc.js)
+ (preprocess (pps ppx_blob ppx_here ppx_deriving.std ppx_let ppx_sexp_conv)))

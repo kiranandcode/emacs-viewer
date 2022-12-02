@@ -114,16 +114,18 @@ let api_routes =
     )
   ]
 
-let run port =
+let run ?emacsclient_cmd ?(debug=false) port =
+
+  Option.iter ~f:Emacs.set_emacsclient_cmd emacsclient_cmd;
+
+  let static_routes = Static.build_static_routes debug in
+
   Dream.run ?port begin
-    Dream.logger @@
+    (if debug then Dream.logger else Fun.id) @@
     Dream.router [
       api_routes;
 
-      Dream.scope "/static" [] [
-        Dream.get "/js/**" @@ Dream.static "_build/default/js";
-        Dream.get "/styles/**" @@ Dream.static "_build/default/styles";
-      ];
+      static_routes;
 
       Dream.get "/" (fun _req ->
         Dream.html {html|

@@ -294,7 +294,7 @@ let rec data_to_view ~hide_completed ~only_clocked  ~search_text ~filter_tags ~a
                    ]]);
                [Vdom.Node.div ~attr:(Vdom.Attr.class_ "org-mode-section-buttons") ([
                   Vdom.Node.div ~attr:(Vdom.Attr.class_ "org-mode-section-action-buttons") [
-                    section_button (fun _ -> print_endline "opening in emacs"; open_in_emacs pos.begin_) "📂";
+                    section_button (fun _ -> open_in_emacs pos.begin_) "📂";
                     section_button (fun _ -> change_clock_status pos.begin_ (Option.is_none clock_run_time)) "🕓";
                     section_button (fun _ -> change_todo_status pos.begin_) "🞋";
                   ];
@@ -419,7 +419,7 @@ let bufferlist_to_view ~set_current_buffer ~set_state ~reload_state
     let%arr model = model
     and set_state = set_state in
     match model.current_buffer with
-    | None -> fun _ -> print_endline "model is empty"; Ui_effect.return ()
+    | None -> fun _ -> Ui_effect.return ()
     | Some buffer ->
       fun pos ->
         let%bind.Effect res = run_action (buffer.buffer_filename, buffer.timestamp, pos, `open_in_emacs) in

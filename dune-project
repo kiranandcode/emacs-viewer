@@ -9,20 +9,25 @@
 
 (maintainers "gopiandcode")
 
-(license AGPLv3.0+)
+(license AGPL-3.0-or-later)
+
+(homepage "https://codeberg.org/gopiandcode/emacs-viewer")
+(bug_reports "https://codeberg.org/gopiandcode/emacs-viewer/issues")
 
 (package
  (name emacs_viewer)
  (synopsis "Web viewer integration for Emacs")
  (description "Web viewer integration for Emacs")
  (depends
-   ocaml
-   core
-   dune
-   dream
-   unix
- )
+   ocaml dune
+   core re sexplib
+   dream cmdliner
+   decoders decoders-sexplib
+   bonsai fuzzy_match timezone
+   async_js 
+   ppx_here ppx_compare ppx_let ppx_sexp_conv ppx_fields_conv ppx_deriving ppx_blob
+   bos)
+ (depopts
+   inotify core_unix ptime)
  (tags
-  (topics emacs web view)))
-
-; See the complete stanza docs at https://dune.readthedocs.io/en/stable/dune-files.html#dune-project
+  (emacs web view)))

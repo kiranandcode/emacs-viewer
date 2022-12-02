@@ -1,0 +1,11 @@
+lib: [
+  "_build/install/default/lib/emacs_viewer/META"
+  "_build/install/default/lib/emacs_viewer/dune-package"
+  "_build/install/default/lib/emacs_viewer/opam"
+]
+bin: [
+  "_build/install/default/bin/emacs_viewer"
+]
+doc: [
+  "_build/install/default/doc/emacs_viewer/LICENSE"
+]

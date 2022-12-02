@@ -26,7 +26,7 @@ let build_project () =
 let run_project () =
   let proc =
     UnixLabels.create_process ~stdin:UnixLabels.stdin  ~stdout:UnixLabels.stdout ~stderr:UnixLabels.stderr
-      ~prog:"opam" ~args:[| "opam"; "exec"; "--";  "dune"; "exec"; "./bin/main.exe"|] in
+      ~prog:"opam" ~args:[| "opam"; "exec"; "--";  "dune"; "exec"; "./bin/main.exe"; "--"; "-D"|] in
   Pid.of_int proc
 
 let process_still_running pid =
@@ -56,6 +56,7 @@ let kill_process pid =
 let inotify = Inotify.create ()
 let watch = Inotify.add_watch inotify "./" [Inotify.S_Modify]
 let watch = Inotify.add_watch inotify "./scripts" [Inotify.S_Modify]
+let watch = Inotify.add_watch inotify "./styles" [Inotify.S_Modify; Inotify.S_Create]
 let watch = Inotify.add_watch inotify "./data" [Inotify.S_Modify; Inotify.S_Create]
 let watch = Inotify.add_watch inotify "./lib" [Inotify.S_Modify; Inotify.S_Create]
 let watch = Inotify.add_watch inotify "./bin" [Inotify.S_Modify; Inotify.S_Create]

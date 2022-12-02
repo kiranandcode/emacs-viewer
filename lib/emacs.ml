@@ -9,11 +9,13 @@ let lift_decoders_error res =
       res
   )
 
-let emacs = Bos.Cmd.v "emacsclient.emacs"
+let emacsclient_cmd = ref "emacsclient.emacs"
+let set_emacsclient_cmd cmd = emacsclient_cmd := cmd
+let emacs () = Bos.Cmd.v (!emacsclient_cmd)
 let emacs_cmd fmt =
   let open Bos in
   Format.ksprintf (fun s -> 
-    OS.Cmd.run_out Cmd.(emacs % "-e" % s)
+    OS.Cmd.run_out Cmd.(emacs () % "-e" % s)
     |> OS.Cmd.to_string
     |> Result.map ~f:Sexplib.Sexp.of_string
     |> Result.map_error ~f:(fun _ -> `Msg "emacs RPC failed")
@@ -22,7 +24,7 @@ let emacs_cmd fmt =
 let emacs_cmd_unit fmt =
   let open Bos in
   Format.ksprintf (fun s -> 
-    OS.Cmd.run Cmd.(emacs % "-e" % s)
+    OS.Cmd.run Cmd.(emacs () % "-e" % s)
     |> Result.map_error ~f:(fun _ -> `Msg "emacs RPC failed")
   ) fmt
 
