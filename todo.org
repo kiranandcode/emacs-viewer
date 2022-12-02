@@ -97,3 +97,4 @@ CLOSED: [2022-12-02 Fri 11:17]
 CLOSED: [2022-12-02 Fri 11:17]
 * DONE Add warnings panel
 CLOSED: [2022-12-02 Fri 12:17]
+* TODO Record gifs to show how to use emacs viewer
