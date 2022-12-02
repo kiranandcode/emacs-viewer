@@ -1,5 +1,4 @@
 
-
 open Core
 open Cmdliner
 open Emacs_viewer
@@ -13,20 +12,20 @@ let decode_file decoder inf =
 let run ty infile =
   match ty, infile with
   | "property", inf ->
-    let res = decode_file Org_data.property inf in
-    print_endline @@ [%show: (Org_data.property, Org_data.D.error) result] res
+    let res = decode_file Decoder.property inf in
+    print_endline @@ [%show: (Emacs_data.property, Decoder.D.error) result] res
   | "clock", inf ->
-    let res = decode_file Org_data.clock inf in
-    print_endline @@ [%show: (Org_data.t, Org_data.D.error) result] res
+    let res = decode_file Decoder.clock inf in
+    print_endline @@ [%show: (Emacs_data.t, Decoder.D.error) result] res
   | "planning", inf ->
-    let res = decode_file Org_data.planning inf in
-    print_endline @@ [%show: (Org_data.t, Org_data.D.error) result] res
+    let res = decode_file Decoder.planning inf in
+    print_endline @@ [%show: (Emacs_data.t, Decoder.D.error) result] res
   | "section", inf ->
-    let res = decode_file Org_data.section inf in
-    print_endline @@ [%show: (Org_data.t, Org_data.D.error) result] res
+    let res = decode_file Decoder.section inf in
+    print_endline @@ [%show: (Emacs_data.t, Decoder.D.error) result] res
   | "org-buffer-data", inf ->
-    let res = decode_file Org_data.org_buffer_data inf in
-    print_endline @@ [%show: ((string * Org_data.t list) list, Org_data.D.error) result] res
+    let res = decode_file Decoder.org_buffer_data inf in
+    print_endline @@ [%show: ((string * Emacs_data.t list) list, Decoder.D.error) result] res
   | _ ->
     Format.ksprintf failwith
       "unsupported sexp parser %s for file %s" ty infile

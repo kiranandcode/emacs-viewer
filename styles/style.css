@@ -35,28 +35,30 @@
 .org-mode-title-text {
   display: flex;
   flex-wrap: wrap;
-  flex-grow: 1
+  flex-grow: 1;
+  margin-left: 5px;
+  margin-right: 5px;
+  align-items: flex-start;
+  margin-top: 5px;
 }
 
 .org-mode-title-text div, .org-mode-title-text p, .org-mode-title-text pre {
-  display: flex;
-  flex-wrap: wrap;
+  display: inline;
   align-items: center;
-  margin-left: 5px;
-  margin-right: 5px;
   margin-top: 0px;
   margin-bottom: 0px;
 }
 
-.org-mode-timestamp {
-  display: flex;
-}
+/* .org-mode-title-text pre { */
+/*     margin-left: 5px; */
+/*     margin-right: 5px; */
+/* } */
 
 .org-mode-timestamp .org-time {
-  margin-left: 5px;
-  margin-right: 5px;
   margin-top: 0px;
   margin-bottom: 0px;
+  margin-left: 2px;
+  margin-right: 2px;
 }
 
 .org-mode-timestamp p {
@@ -64,11 +66,29 @@
   margin-bottom: 0px;
 }
 
+.org-mode-timestamp {
+  display:     inline-flex !important;
+  text-align: center;
+  display: flex;
+  font-family: monospace;
+  background: #fdfaff;
+  border-radius: 5px;
+}
+
 .org-mode-title-clock {
-    color: red;
-    font-weight: bold;
+    color: #120566;
     display: flex;
     align-items: center;
+    margin-left: 2px;
+    margin-right: 2px;
+}
+
+.org-mode-title-clock > div {
+    color: #120566;
+    background: #ffffff91;
+    border-radius: 5px;
+    font-weight: bold;
+    padding: 5px;
 }
 
 .org-mode-children.org-mode-headline-childen {
@@ -118,7 +138,7 @@
 
 .org-time {
   font-weight: lighter;
-  font-size: small;
+  /* font-size: small; */
   color: #333332;
 }
 
@@ -265,3 +285,35 @@
   padding-top: 2px;
   padding-bottom: 2px;
 }
+
+.loader {
+  border: 16px solid #f3f3f3; /* Light grey */
+  border-top: 16px solid #3498db; /* Blue */
+  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg) }
+  100% { transform: rotate(360deg) }
+}
+
+.hero.main-info.loading-info {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  align-items: center;
+}
+.info-loading {
+  font-weight: bold;
+  font-size: x-large;
+  margin-top: 10px;
+}
+.loading-panel {
+  text-align: center;
+  padding: 5px;
+}
+
+

@@ -17,10 +17,9 @@
  (description "Web viewer integration for Emacs")
  (depends
    ocaml
+   core
    dune
    dream
-   note
-   brr
    unix
  )
  (tags

@@ -54,6 +54,7 @@ CLOSED: [2022-12-02 Fri 07:46]
 :ORDERED:  t
 :END:
 :LOGBOOK:
+CLOCK: [2022-12-02 Fri 10:26]--[2022-12-02 Fri 10:26] =>  0:00
 CLOCK: [2022-12-02 Fri 07:27]--[2022-12-02 Fri 07:31] =>  0:04
 CLOCK: [2022-12-02 Fri 07:25]--[2022-12-02 Fri 07:25] =>  0:00
 CLOCK: [2022-12-02 Fri 07:25]--[2022-12-02 Fri 07:25] =>  0:00
@@ -72,8 +73,26 @@ CLOSED: [2022-12-02 Fri 07:46]
 CLOSED: [2022-12-01 Thu 13:02]
 * DONE Add option to hide/show hidden tasks
 CLOSED: [2022-12-01 Thu 13:02]
-* TODO Fix loading screen
+* DONE Fix loading screen
+CLOSED: [2022-12-02 Fri 09:53]
 :LOGBOOK:
-CLOCK: [2022-12-02 Fri 07:53]
+CLOCK: [2022-12-02 Fri 09:24]--[2022-12-02 Fri 09:53] =>  0:29
+CLOCK: [2022-12-02 Fri 07:53]--[2022-12-02 Fri 09:23] =>  1:30
 :END:
-* TODO Fix rendering of timestamps such as <2022-12-02 Fri>
+** DONE Find out how to do loading animation
+CLOSED: [2022-12-02 Fri 09:24]
+:LOGBOOK:
+CLOCK: [2022-12-02 Fri 09:23]--[2022-12-02 Fri 09:24] =>  0:01
+:END:
+* DONE Fix rendering of timestamps such as <2022-12-02 Fri>
+CLOSED: [2022-12-02 Fri 11:17]
+:LOGBOOK:
+CLOCK: [2022-12-02 Fri 10:26]--[2022-12-02 Fri 11:17] =>  0:51
+:END:
+** DONE If start and end time dates are the same (and no time, or only time on second), only display one 
+CLOSED: [2022-12-02 Fri 10:56]
+** DONE If start and end time dates differ, draw both with line between them <2022-12-02 Fri>--<2022-12-04 Fri>
+CLOSED: [2022-12-02 Fri 11:17]
+** DONE If start and end time dates are the same and differing times, display first date, and draw both times with line between them <2022-12-02 Fri 02:30-03:30>
+CLOSED: [2022-12-02 Fri 11:17]
+* TODO Add warnings panel

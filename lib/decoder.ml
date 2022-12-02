@@ -3,8 +3,6 @@ module Sexp = Sexplib.Sexp
 module D = Decoders_sexplib.Decode
 open D
 
-open Emacs_data
-
 let option_or_else f = function None -> f () | Some v -> Some v
 let derr ?context fmt =
   Format.ksprintf (fun s -> Decoders.Error.make ?context s) fmt
@@ -121,7 +119,7 @@ let property =
   match Option.all [find ":key"; find ":value"; find ":begin"; find ":end"] with
   | Some [key; value; begin_;end_] ->
     let begin_, end_ = Int.of_string begin_, Int.of_string end_ in
-    succeed (Data.{key;value; pos={begin_;end_}})
+    succeed (Emacs_data.{key;value; pos={begin_;end_}})
   | _ ->
     fail "invalid form for property list"
 
@@ -177,7 +175,7 @@ let timestamp = function
     ] (fun raw_value
         year_start month_start day_start hour_start minute_start
         year_end month_end day_end hour_end minute_end begin_ end_ ->
-        Data.{
+        Emacs_data.{
           raw=raw_value;
           start={ year=year_start; month=month_start; day=day_start; hour=hour_start; minute=minute_start };
           end_={ year=year_end; month=month_end; day=day_end; hour=hour_end; minute=minute_end };
@@ -190,46 +188,46 @@ let timestamp = function
 let rec txt =
   let (let+) x f = Result.bind x ~f in
   function
-  | Sexp.List (Atom "#" :: List (Atom txt :: _) :: []) -> Ok (Data.Lit txt)
+  | Sexp.List (Atom "#" :: List (Atom txt :: _) :: []) -> Ok (Emacs_data.Lit txt)
   | Sexp.List (Atom "strike-through" :: _ :: rest) ->
     let+ rest = txt (List rest) in
-    Ok (Data.Format (Strikethrough, rest))
+    Ok (Emacs_data.Format (Strikethrough, rest))
   | Sexp.List (Atom "italic" :: _ :: rest) ->
     let+ rest = txt (List rest) in
-    Ok (Data.Format (Italic, rest))
+    Ok (Emacs_data.Format (Italic, rest))
   | Sexp.List (Atom "bold" :: _ :: rest) ->
     let+ rest = txt (List rest) in
-    Ok (Data.Format (Bold, rest))
+    Ok (Emacs_data.Format (Bold, rest))
   | Sexp.List (Atom "underline" :: _ :: rest) ->
     let+ rest = txt (List rest) in
-    Ok (Data.Format (Underline, rest))
+    Ok (Emacs_data.Format (Underline, rest))
   | Sexp.List (Atom "subscript" :: _ :: rest) ->
     let+ rest = txt (List rest) in
-    Ok (Data.Format (Subscript, rest))
+    Ok (Emacs_data.Format (Subscript, rest))
   | Sexp.List (Atom "superscript" :: _ :: rest) ->
     let+ rest = txt (List rest) in
-    Ok (Data.Format (Superscript, rest))
+    Ok (Emacs_data.Format (Superscript, rest))
   | Sexp.List (Atom "timestamp" :: _) as sexp ->
     let+ timestamp = timestamp sexp in
-    Ok (Data.Timestamp timestamp)
+    Ok (Emacs_data.Timestamp timestamp)
   | Sexp.List (Atom "statistics-cookie" :: prop_list :: []) ->
     let+ prop_list = property_list_opt string prop_list in
     let+ value = List.Assoc.find ~equal:String.equal prop_list ":value"
                  |> Result.of_option
                       ~error:(derr "failed to find value binding for stats cookie") in
-    Ok (Data.StatisticsCookie value)
+    Ok (Emacs_data.StatisticsCookie value)
   | Sexp.List (Atom "code" :: prop_list :: []) ->
     let+ prop_list = property_list_opt string prop_list in
     let+ value = List.Assoc.find ~equal:String.equal prop_list ":value"
                  |> Result.of_option
                       ~error:(derr "failed to find value binding for code") in
-    Ok (Data.Code value)
+    Ok (Emacs_data.Code value)
   | Sexp.List (Atom "verbatim" :: prop_list :: []) ->
     let+ prop_list = property_list_opt string prop_list in
     let+ value = List.Assoc.find ~equal:String.equal prop_list ":value"
                  |> Result.of_option
                       ~error:(derr "failed to find value binding for code") in
-    Ok (Data.Verbatim value)
+    Ok (Emacs_data.Verbatim value)
   | Sexp.List (Atom "entity" :: prop_list :: []) ->
     let+ prop_list = property_list_opt string prop_list in
     let+ value = List.Assoc.find ~equal:String.equal prop_list ":html"
@@ -241,7 +239,7 @@ let rec txt =
                    List.Assoc.find ~equal:String.equal prop_list ":latex")
                  |> Result.of_option
                       ~error:(derr "failed to find encodable binding for entity") in
-    Ok (Data.Entity value)
+    Ok (Emacs_data.Entity value)
   | Sexp.List (Atom "inline-src-block" :: prop_list :: []) ->
     let+ prop_list = property_list_opt string prop_list in
     let+ lang = List.Assoc.find ~equal:String.equal prop_list ":language"
@@ -250,7 +248,7 @@ let rec txt =
     let+ value = List.Assoc.find ~equal:String.equal prop_list ":value"
                  |> Result.of_option
                       ~error:(derr "failed to find value for inline-src-block") in
-    Ok (Data.InlineSrcBlock {language=lang;value})
+    Ok (Emacs_data.InlineSrcBlock {language=lang;value})
   | Sexp.List elts ->
     let rec loop acc = function
       | Sexp.Atom "#" :: vl :: rest ->
@@ -259,7 +257,7 @@ let rec txt =
       | vl :: rest ->
         let+ binding = txt vl in
         loop (binding :: acc) rest
-      | [] -> Ok (Data.Concat (List.rev acc)) in
+      | [] -> Ok (Emacs_data.Concat (List.rev acc)) in
     loop [] elts
   | context -> err ~context "expected literal sexp"
 
@@ -271,7 +269,7 @@ let section t =
     match find ":begin", find ":end" with
     | Some begin_, Some end_ ->
       let begin_, end_ = Int.of_string begin_, Int.of_string end_ in
-      succeed (Data.Section {pos={begin_; end_}; properties})
+      succeed (Emacs_data.Section {pos={begin_; end_}; properties})
     | _ -> fail "invalid form for section"
   end
 
@@ -300,14 +298,14 @@ let headline t =
           ":title", txt
         ] (fun raw_value begin_ end_ level priority tags todo_keyword todo_type title ->
           let todo =
-            Option.map ~f:(fun (keyword, ty) -> Data.{keyword;ty}) @@
+            Option.map ~f:(fun (keyword, ty) -> Emacs_data.{keyword;ty}) @@
             Option.both todo_keyword todo_type in
           let tags = Option.value ~default:[] tags in
           let closed = !closed in
           let scheduled = !scheduled in
           let deadline = !deadline in
           fun subsections ->
-            Data.Headline {
+            Emacs_data.Headline {
               raw_value; title;
               pos={begin_; end_};
               level;
@@ -335,7 +333,7 @@ let drawer t =
           ":drawer-name", string;
         ] (fun begin_ end_ drawer_name ->
           fun contents ->
-            Data.Drawer {
+            Emacs_data.Drawer {
               name=drawer_name;
               pos={begin_;end_};
               contents
@@ -361,7 +359,7 @@ let clock =
           ":duration", nillable string;
           ":begin", int; ":end", int;
         ] (fun status value duration begin_ end_ ->
-          Data.Clock {
+          Emacs_data.Clock {
             status;
             value;
             duration;
@@ -380,7 +378,7 @@ let planning =
           ":deadline", nillable timestamp;
           ":begin", int; ":end", int;
         ] (fun closed scheduled deadline begin_ end_ ->
-          Data.Planning {
+          Emacs_data.Planning {
             closed;
             scheduled;
             deadline;
@@ -392,7 +390,7 @@ let planning =
 let t =
   fix (fun t ->
     one_of [
-      "property", property >|= (fun prop -> Data.Property prop);
+      "property", property >|= (fun prop -> Emacs_data.Property prop);
       "clock", clock;
       "planning", planning;
       "section", section t;
@@ -415,7 +413,7 @@ let org_buffer_data = alist org_data
 let buffer_timestamp =
   typed_list KV.["modification-time", int; "modification-count", int]
     (fun modification_time modification_count ->
-       Data.{modification_time; modification_count}
+       Emacs_data.{modification_time; modification_count}
     )
 
 let buffer_data =

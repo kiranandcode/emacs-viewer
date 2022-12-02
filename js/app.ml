@@ -6,9 +6,9 @@ open Bonsai.Let_syntax
 module Buffer = struct
 
   type t = {
-    timestamp: Emacs_data.Data.buffer_timestamp;
+    timestamp: Emacs_data.buffer_timestamp;
     buffer_filename: string;
-    elements: Emacs_data.Data.t list
+    elements: Emacs_data.t list
   } [@@deriving sexp, fields, equal]
 
   let init_opt data = match data with
@@ -37,15 +37,15 @@ end
 let loading_view =
   let open Vdom.Node in
   Value.return @@ div ~attr:Vdom.Attr.(many_without_merge [
-    classes ["hero"; "main-info"]
+    classes ["hero"; "main-info"; "loading-info"]
   ]) [
-    div ~attr:(Vdom.Attr.class_ "info-loading") [
-      text "Loading...";
-    ];
+    div ~attr:(Vdom.Attr.class_ "loading-panel") [
+      div ~attr:(Vdom.Attr.class_ "loader") [];
+      div ~attr:(Vdom.Attr.class_ "info-loading") [
+        text "Loading...";
+      ];
+    ]
   ]
-
-let adiv ~cls contents =
-  Vdom.Node.div ~attr:(Vdom.Attr.classes cls) contents
 
 let mapM ls ~f =
   Value.map ls ~f:(fun ls -> 
@@ -59,22 +59,7 @@ let mapM ls ~f =
     |> Sequence.map ~f:(fun (_, vl) -> vl)
     |> Sequence.to_list)
 
-let merge_list ~f ~merge ls =
-  let rec loop ~f (merged, acc) = function
-    | h :: t ->
-      begin match f h with
-      | Either.First vl -> loop ~f (vl :: merged, acc) t
-      | Second vl -> match merged with
-        | [] -> loop ~f ([], vl :: acc) t
-        | merged -> loop ~f ([], vl :: merge (List.rev merged) :: acc) t
-      end
-    | [] ->
-      match merged with
-      | [] -> List.rev acc
-      | _ -> List.rev (merge (List.rev merged) :: acc) in
-  loop ~f ([], []) ls
-
-let render_time (ts: Emacs_data.Data.time) =
+let render_time (ts: Emacs_data.time) =
   let time = Format.sprintf "%02d-%02d-%02d%s" ts.year ts.month ts.day
                (match ts.hour, ts.minute with
                 | Some hour, Some minute -> Format.sprintf " %02d:%02d" hour minute
@@ -83,127 +68,77 @@ let render_time (ts: Emacs_data.Data.time) =
                 | None, None -> "") in
   Vdom.Node.div ~attr:(Vdom.Attr.class_ "org-time") Vdom.Node.[p [text time]]
 
-let render_timestamp (ts: Emacs_data.Data.timestamp) =
-  Vdom.Node.div ~attr:(Vdom.Attr.class_ "org-mode-timestamp") [
-    render_time ts.start;
-    render_time ts.end_;
-  ]
+let render_timestamp (ts: Emacs_data.timestamp) =
+  match Utils.compare_times ts.start ts.end_ with
+  | `EqualDates ->
+    Vdom.Node.div ~attr:(Vdom.Attr.classes ["org-mode-timestamp"; "org-mode-timestamp-single"]) [ render_time ts.start ]
+  | `SameDatesDifferentTimes ->
+    Vdom.Node.div ~attr:(Vdom.Attr.classes ["org-mode-timestamp"; "org-mode-timestamp-time-range"]) [
+      render_time Emacs_data.{ts.start with hour=None; minute=None};
+      let (!) v = Option.value ~default:0 v in
+      Vdom.Node.div ~attr:(Vdom.Attr.classes ["org-time";"org-time-diff"]) [
+        Vdom.Node.(p [text (Format.sprintf "%02d:%02d" (! (ts.start.hour)) (! (ts.start.minute)))]);
+        Vdom.Node.div ~attr:(Vdom.Attr.class_ "org-mode-timestamp-separator") [ Vdom.Node.text "--" ];
+        Vdom.Node.(p [text (Format.sprintf "%02d:%02d" (! (ts.end_.hour)) (! (ts.end_.minute)))]);
+      ]
+    ]
+  | `DifferentDates ->
+    Vdom.Node.div ~attr:(Vdom.Attr.classes ["org-mode-timestamp"; "org-mode-timestamp-multi"]) [
+      render_time ts.start;
+      Vdom.Node.div ~attr:(Vdom.Attr.class_ "org-mode-timestamp-separator") [ Vdom.Node.text "--" ];
+      render_time ts.end_;
+    ]
 
-let rec render_text (txt: Emacs_data.Data.txt) =
+let rec render_text (txt: Emacs_data.txt) =
   let to_class = function
-    | Emacs_data.Data.Italic -> "italic"
-    | Emacs_data.Data.Strikethrough -> "strikethrough" | Emacs_data.Data.Bold -> "bold"
-    | Emacs_data.Data.Underline -> "underline" | Emacs_data.Data.Subscript -> "subscript"
-    | Emacs_data.Data.Superscript -> "superscript" in
+    | Emacs_data.Italic -> "italic"
+    | Emacs_data.Strikethrough -> "strikethrough" | Emacs_data.Bold -> "bold"
+    | Emacs_data.Underline -> "underline" | Emacs_data.Subscript -> "subscript"
+    | Emacs_data.Superscript -> "superscript" in
   let open Vdom.Node in
   match txt with
-  | Emacs_data.Data.Lit txt -> p [text txt]
-  | Emacs_data.Data.Timestamp ts -> render_timestamp ts
-  | Emacs_data.Data.Concat elts ->
+  | Emacs_data.Lit txt -> p [text txt]
+  | Emacs_data.Timestamp ts -> render_timestamp ts
+  | Emacs_data.Concat elts ->
     let elts = List.map ~f:render_text elts in
     div elts
-  | Emacs_data.Data.StatisticsCookie txt ->
+  | Emacs_data.StatisticsCookie txt ->
     p ~attr:(Vdom.Attr.class_ "org-text-stats-cookie") [text txt]
-  | Emacs_data.Data.Code cde ->
+  | Emacs_data.Code cde ->
     pre [text cde]
-  | Emacs_data.Data.Verbatim verb ->
+  | Emacs_data.Verbatim verb ->
     pre [text verb]
-  | Emacs_data.Data.Entity ent ->
+  | Emacs_data.Entity ent ->
     p ~attr:(Vdom.Attr.class_ "org-text-entity") [text ent]
-  | Emacs_data.Data.Format (fmt, t) ->
+  | Emacs_data.Format (fmt, t) ->
     div ~attr:(Vdom.Attr.class_ (to_class fmt)) [render_text t]
-  | Emacs_data.Data.InlineSrcBlock { language; value } ->
+  | Emacs_data.InlineSrcBlock { language; value } ->
     pre [code ~attr:(Vdom.Attr.class_ ("language-" ^ language)) [text value]]
 
-let render_todo ({ keyword; ty }: Emacs_data.Data.todo) =
+let render_todo ({ keyword; ty }: Emacs_data.todo) =
   let todo_class = match ty with `Done -> "org-mode-todo-done" | `Todo -> "org-mode-todo-todo" in
-  adiv ~cls:["org-mode-todo"; todo_class] [ Vdom.Node.text keyword ]
-
-let rec subsection_contains_active_clock : Emacs_data.Data.t -> bool =
-  function
-  | Emacs_data.Data.Property _ -> false
-  | Emacs_data.Data.Section { pos=_; properties } ->
-    List.exists ~f:subsection_contains_active_clock properties
-  | Emacs_data.Data.Headline _ -> false
-  | Emacs_data.Data.Drawer { name="LOGBOOK"; pos=_; contents } ->
-    List.exists ~f:subsection_contains_active_clock contents
-  | Emacs_data.Data.Drawer { name=_; pos=_; contents=_ } -> false
-  | Emacs_data.Data.Clock {status;_} ->
-    begin match status with `closed -> false | `running -> true end
-  | Emacs_data.Data.Planning _ -> false
-
-let get_active_clock : Emacs_data.Data.t -> _ option =
-  let exception FoundClock of
-      (Emacs_data.Data.timestamp * string option * Emacs_data.Data.pos) in
-  let rec loop =
-    function
-    | Emacs_data.Data.Property _ -> ()
-    | Emacs_data.Data.Section { pos=_; properties } ->
-      List.iter ~f:loop properties
-    | Emacs_data.Data.Headline _ -> ()
-    | Emacs_data.Data.Drawer { name="LOGBOOK"; pos=_; contents } ->
-      List.iter ~f:loop contents
-    | Emacs_data.Data.Drawer { name=_; pos=_; contents=_ } -> ()
-    | Emacs_data.Data.Clock {status; value; duration; pos} ->
-      begin match status with `closed -> () | `running ->
-        raise (FoundClock (value,duration,pos)) end
-    | Emacs_data.Data.Planning _ -> () in
-  fun data -> try loop data; None with FoundClock (value, duration, pos) ->
-    Some (value,duration,pos)
-
-let rec subsection_contains_matching ~hide_completed ~only_clocked ~search_text ~filter_tags
-  : Emacs_data.Data.t -> bool =
-  function
-  | Emacs_data.Data.Property _ -> false
-  | Emacs_data.Data.Section { pos=_; properties } ->
-    List.exists ~f:(subsection_contains_matching
-                      ~hide_completed ~only_clocked ~search_text ~filter_tags)
-      properties
-  | Emacs_data.Data.Headline data ->
-    let is_completed = match data.todo with
-      | None -> false
-      | Some td -> match td.ty with `Todo -> false | `Done -> true  in
-    let has_clock = List.exists ~f:subsection_contains_active_clock data.subsections in
-    let clock_matches = not only_clocked || has_clock in
-    let completed_matches = not (hide_completed && is_completed) in
-    let text_matches =
-      if String.is_empty search_text
-      then true
-      else Fuzzy_match.is_match
-             ~char_equal:Char.Caseless.equal
-             ~pattern:search_text data.raw_value in 
-    let tags_match =
-      if List.is_empty filter_tags
-      then true
-      else List.for_all ~f:(fun tag -> List.mem ~equal:String.equal data.tags tag) filter_tags in
-    (completed_matches && clock_matches && text_matches && tags_match)
-    || List.exists ~f:(subsection_contains_matching
-                         ~hide_completed ~only_clocked ~search_text ~filter_tags)
-         data.subsections
-  | Emacs_data.Data.Drawer _ 
-  | Emacs_data.Data.Clock _
-  | Emacs_data.Data.Planning _ -> false
+  Vdom.Node.div ~attr:(Vdom.Attr.classes ["org-mode-todo"; todo_class]) [ Vdom.Node.text keyword ]
 
 let rec data_to_view ~hide_completed ~only_clocked  ~search_text ~filter_tags ~add_tag
       ~open_in_emacs ~change_clock_status ~change_todo_status :
-  Emacs_data.Data.t Value.t -> Vdom.Node.t Computation.t = fun data ->
+  Emacs_data.t Value.t -> Vdom.Node.t Computation.t = fun data ->
   match%sub data with
-  | Emacs_data.Data.Property { key; value; pos=_ } ->
+  | Emacs_data.Property { key; value; pos=_ } ->
     let%arr key = key
     and value = value in
     Vdom.Node.(
-      adiv ~cls:["org-data"; "org-property"] [
-        adiv ~cls:["org-property-key"] [ text key ];
-        adiv ~cls:["org-property-value"] [ text value ];
+      div ~attr:(Vdom.Attr.classes ["org-data"; "org-property"]) [
+        div ~attr:(Vdom.Attr.classes ["org-property-key"]) [ text key ];
+        div ~attr:(Vdom.Attr.classes ["org-property-value"]) [ text value ];
       ]
     )
-  | Emacs_data.Data.Section { pos=_; properties } ->
+  | Emacs_data.Section { pos=_; properties } ->
     let%sub children = Bonsai.lazy_ @@
       lazy (mapM ~f:(data_to_view  ~only_clocked ~hide_completed ~search_text ~filter_tags ~add_tag
                        ~open_in_emacs ~change_clock_status ~change_todo_status) properties) in
     let%arr children = children in
-    adiv ~cls:["org-mode-section"; "org-mode-children";] children
-  | Emacs_data.Data.Headline {
+    Vdom.Node.div ~attr:(Vdom.Attr.classes ["org-mode-section"; "org-mode-children"]) children
+  | Emacs_data.Headline {
     title;
     raw_value;
     pos; level;
@@ -211,9 +146,9 @@ let rec data_to_view ~hide_completed ~only_clocked  ~search_text ~filter_tags ~a
     tags;
     todo;
     subsections;
-    closed=(_: Emacs_data.Data.timestamp option);
-    scheduled=(_: Emacs_data.Data.timestamp option);
-    deadline=(_: Emacs_data.Data.timestamp option);
+    closed=(_: Emacs_data.timestamp option);
+    scheduled=(_: Emacs_data.timestamp option);
+    deadline=(_: Emacs_data.timestamp option);
   } ->
     let%sub should_fold, set_should_fold =
       Bonsai.state_machine0 [%here] (module Bool) (module Unit) ~default_model:false
@@ -241,7 +176,7 @@ let rec data_to_view ~hide_completed ~only_clocked  ~search_text ~filter_tags ~a
       not (hide_completed && is_completed) in
     let%sub has_clock =
       let%arr subsections = subsections in
-      List.exists ~f:subsection_contains_active_clock subsections in
+      List.exists ~f:Utils.subsection_contains_active_clock subsections in
     let%sub clock_matches =
       let%arr only_clocked = only_clocked
       and has_clock = has_clock in
@@ -252,7 +187,7 @@ let rec data_to_view ~hide_completed ~only_clocked  ~search_text ~filter_tags ~a
       and filter_tags = filter_tags
       and only_clocked = only_clocked
       and hide_completed = hide_completed in
-      List.exists ~f:(subsection_contains_matching ~only_clocked ~hide_completed
+      List.exists ~f:(Utils.subsection_contains_matching ~only_clocked ~hide_completed
                         ~search_text ~filter_tags) subsections in
     let%sub immediate_match =
       let%arr text_matches = text_matches and tags_match = tags_match
@@ -271,7 +206,7 @@ let rec data_to_view ~hide_completed ~only_clocked  ~search_text ~filter_tags ~a
             Bonsai.Clock.approx_now ~tick_every:(Time_ns.Span.of_sec 2.0) in
           let%arr subsections = subsections
           and current_time = current_time in
-          match List.find_map ~f:get_active_clock subsections with
+          match List.find_map ~f:Utils.get_active_clock subsections with
           | None -> None
           | Some (time,_duration,_pos) ->
             Option.map ~f:(fun clock_start ->
@@ -279,8 +214,8 @@ let rec data_to_view ~hide_completed ~only_clocked  ~search_text ~filter_tags ~a
               |> Time_ns.Span.to_short_string
             ) @@
             Option.first_some
-              (Emacs_data.Data.time_to_time_ns time.start)
-              (Emacs_data.Data.time_to_time_ns time.end_) 
+              (Emacs_data.time_to_time_ns time.start)
+              (Emacs_data.time_to_time_ns time.end_) 
         else return (Value.return None) in
       let%sub fold_buttons_panel =
         let%sub fold_button =
@@ -298,7 +233,7 @@ let rec data_to_view ~hide_completed ~only_clocked  ~search_text ~filter_tags ~a
         if List.is_empty subsections
         then []
         else [
-          adiv ~cls:["org-mode-section-fold-buttons"] [
+          Vdom.Node.div ~attr:(Vdom.Attr.class_ "org-mode-section-fold-buttons") [
             Vdom.Node.div ~attr:(Vdom.Attr.many_without_merge [
               Vdom.Attr.on_click (fun _ -> toggle_fold ());
               Vdom.Attr.classes ["org-mode-section-button"; fold_button_class]
@@ -349,73 +284,78 @@ let rec data_to_view ~hide_completed ~only_clocked  ~search_text ~filter_tags ~a
                (match todo with
                 | None -> []
                 | Some todo ->
-                  [adiv ~cls:["org-mode-title-todo"] [render_todo todo]]);
-               [adiv ~cls:["org-mode-title-text"] [render_text title]];
+                  [Vdom.Node.div ~attr:(Vdom.Attr.class_ "org-mode-title-todo") [render_todo todo]]);
+               [Vdom.Node.div ~attr:(Vdom.Attr.class_ "org-mode-title-text") [render_text title]];
                (match clock_run_time with
                 | None -> []
                 | Some run_time ->
-                  [adiv ~cls:["org-mode-title-clock"] [Vdom.Node.text run_time]]);
-               [adiv ~cls:["org-mode-section-buttons"] ([
-                  adiv ~cls:["org-mode-section-action-buttons"] [
+                  [Vdom.Node.div ~attr:(Vdom.Attr.class_ "org-mode-title-clock") [
+                     Vdom.Node.div [ Vdom.Node.text run_time ]
+                   ]]);
+               [Vdom.Node.div ~attr:(Vdom.Attr.class_ "org-mode-section-buttons") ([
+                  Vdom.Node.div ~attr:(Vdom.Attr.class_ "org-mode-section-action-buttons") [
                     section_button (fun _ -> print_endline "opening in emacs"; open_in_emacs pos.begin_) "📂";
                     section_button (fun _ -> change_clock_status pos.begin_ (Option.is_none clock_run_time)) "🕓";
                     section_button (fun _ -> change_todo_status pos.begin_) "🞋";
                   ];
                 ] @ fold_buttons_panel)]
              ]);
-          adiv ~cls:["org-mode-section-details"] [
-            adiv ~cls:["org-mode-tags"] (List.map ~f:(fun v ->
+          Vdom.Node.div ~attr:(Vdom.Attr.class_ "org-mode-section-details") [
+            Vdom.Node.div ~attr:(Vdom.Attr.class_ "org-mode-tags") (List.map ~f:(fun v ->
               Vdom.Node.(p ~attr:(Vdom.Attr.on_click (fun _ -> add_tag v)) [text v])) tags
             );
           ]
         ];
-        adiv ~cls:["org-mode-headline-childen";"org-mode-children"] subsections
+        Vdom.Node.div ~attr:(Vdom.Attr.classes ["org-mode-headline-childen";"org-mode-children"]) subsections
       ]
     end
     else return (Value.return (Vdom.Node.text ""))
-  | Emacs_data.Data.Drawer { name; pos=_; contents } ->
+  | Emacs_data.Drawer { name; pos=_; contents } ->
     let%sub contents = Bonsai.lazy_ @@
       lazy (mapM ~f:(data_to_view ~only_clocked ~hide_completed ~search_text ~filter_tags ~add_tag
                     ~open_in_emacs ~change_clock_status ~change_todo_status) contents) in
     let%arr contents = contents
     and name = name in
-    adiv ~cls:["org-mode-drawer"] [
-      adiv ~cls:["org-mode-drawer-name"] [Vdom.Node.text name];
-      adiv ~cls:["org-mode-drawer-children";"org-mode-children"] contents;
+    Vdom.Node.div ~attr:(Vdom.Attr.class_ "org-mode-drawer") [
+      Vdom.Node.div ~attr:(Vdom.Attr.class_ "org-mode-drawer-name") [Vdom.Node.text name];
+      Vdom.Node.div ~attr:(Vdom.Attr.classes ["org-mode-drawer-children";"org-mode-children"]) contents;
     ]
-  | Emacs_data.Data.Clock {status; value;duration; pos=_} ->
+  | Emacs_data.Clock {status; value;duration; pos=_} ->
     let%arr status = status
     and value = value
     and duration = duration in
     let clock_class = match status with
       | `closed -> "org-mode-clock-closed"
       | `running -> "org-mode-clock-running" in
-    adiv ~cls:["org-mode-clock";clock_class] [
-      adiv ~cls:["org-mode-clock-status"] [
+    Vdom.Node.div ~attr:(Vdom.Attr.classes ["org-mode-clock";clock_class]) [
+      Vdom.Node.div ~attr:(Vdom.Attr.class_ "org-mode-clock-status") [
         Vdom.Node.text (match status with
           | `closed -> "closed"
           | `running -> "running"
         )];
-      adiv ~cls:["org-mode-clock-duration"] (match duration with None -> []
-                                                               | Some duration ->
-                                                                 [Vdom.Node.text duration]);
-      adiv ~cls:["org-mode-clock-value"] [(render_timestamp value)];
+      Vdom.Node.div ~attr:(Vdom.Attr.class_ "org-mode-clock-duration")
+        (match duration with
+           None -> []
+         | Some duration ->
+           [Vdom.Node.text duration]);
+      Vdom.Node.div ~attr:(Vdom.Attr.class_ "org-mode-clock-value")
+        [(render_timestamp value)];
     ]
-  | Emacs_data.Data.Planning {
+  | Emacs_data.Planning {
     closed; scheduled; deadline; pos=_
   } ->
     let%arr closed = closed
     and scheduled = scheduled
     and deadline = deadline in
-    adiv ~cls:["org-mode-planning"] (List.concat [
+    Vdom.Node.div ~attr:(Vdom.Attr.class_ "org-mode-planning") (List.concat [
       (match closed with None -> [] | Some closed ->
-         [adiv ~cls:["org-mode-planning-timestamp"; "org-mode-planning-closed"]
+         [Vdom.Node.div ~attr:(Vdom.Attr.classes ["org-mode-planning-timestamp"; "org-mode-planning-closed"])
             [render_timestamp closed]]);
       (match scheduled with None -> [] | Some scheduled ->
-         [adiv ~cls:["org-mode-planning-timestamp"; "org-mode-planning-scheduled"]
+         [Vdom.Node.div ~attr:(Vdom.Attr.classes ["org-mode-planning-timestamp"; "org-mode-planning-scheduled"])
             [render_timestamp scheduled]]);
       (match deadline with None -> [] | Some deadline ->
-         [adiv ~cls:["org-mode-planning-timestamp"; "org-mode-planning-deadline"]
+         [Vdom.Node.div ~attr:(Vdom.Attr.classes ["org-mode-planning-timestamp"; "org-mode-planning-deadline"])
             [render_timestamp deadline]]);
     ])
 
@@ -425,16 +365,20 @@ let current_buffer_to_view
   match%sub current_buffer with
   | None ->
     return @@ (Value.return @@
-               adiv ~cls:["org-mode-current-buffer";
-                          "org-mode-empty-buffer";
-                          "centered-column"] [Vdom.Node.text "Please select a buffer..."])
+               Vdom.Node.div
+                 ~attr:(Vdom.Attr.classes
+                          ["org-mode-current-buffer";
+                           "org-mode-empty-buffer";
+                           "centered-column"])
+                 [Vdom.Node.text "Please select a buffer..."])
   | Some buffer ->
     let%sub buffer_entries =
       mapM ~f:(data_to_view ~only_clocked ~hide_completed ~search_text ~filter_tags ~add_tag
                  ~open_in_emacs ~change_clock_status ~change_todo_status)
         (Value.map ~f:Buffer.elements buffer) in
     let%arr buffer_entries = buffer_entries in
-    adiv ~cls:["org-mode-current-buffer"; "centered-column"] buffer_entries
+    Vdom.Node.div ~attr:(Vdom.Attr.classes ["org-mode-current-buffer"; "centered-column"])
+      buffer_entries
 
 let navigation_bar_view set_current_buffer reload_state buffers =
   let open Vdom.Node in
@@ -460,82 +404,11 @@ let navigation_bar_view set_current_buffer reload_state buffers =
         ]]];
   ])
 
-let tag_split_re = Re.compile (Re.Pcre.re ":[^ ]*?(:[^ ]*?)*:")
-let split_tags s =
-  let text, tags =
-    Re.split_full tag_split_re s
-    |> List.partition_map ~f:(function
-        `Delim ts -> Either.Second (String.concat_array @@ Re.Group.all ts)
-      | `Text s -> Either.First s) in
-  String.concat text, (String.split_on_chars ~on:[':'] (String.concat tags)
-                       |> List.filter ~f:(fun f -> not @@ String.is_empty f))
-
-let tagged_search_bar =
-  let%sub tags_list, update_tags =
-    Bonsai.state_machine0 [%here]
-      (module String.Set)
-      (module struct
-        type t = [`AddTag of string | `AddTags of string list | `RemoveTag of string | `Reset]
-        [@@deriving sexp_of]
-      end)
-      ~default_model:String.Set.empty
-      ~apply_action:(fun ~inject:_ ~schedule_event:_ model -> function
-        | `AddTag s -> String.Set.add model s
-        | `AddTags s -> List.fold_left ~init:model ~f:(String.Set.add) s
-        | `RemoveTag s -> String.Set.remove model s
-        | `Reset -> String.Set.empty
-      ) in
-  let%sub text, update_text = Bonsai.state_machine1 [%here]
-                                (module String)
-                                (module struct
-                                  type t = [`SetText of string | `Reset]
-                                  [@@deriving sexp_of]
-                                end)
-                                ~default_model:""
-                                ~apply_action:(fun ~inject:_ ~schedule_event update_tags _ -> function
-                                  | `SetText text ->
-                                    let text, tags = split_tags text in
-                                    schedule_event (update_tags (`AddTags tags));
-                                    text
-                                  | `Reset -> schedule_event (update_tags (`Reset)); ""
-                                ) update_tags in
-  let render_tag ~clear_tag name =
-    let open Vdom.Node in
-    div ~attr:(Vdom.Attr.class_ "configuration-search-bar-tag") [
-      div ~attr:(Vdom.Attr.class_ "configuration-search-bar-tag-name") [
-        text name
-      ];
-      div ~attr:(Vdom.Attr.many_without_merge [
-        Vdom.Attr.class_ "configuration-search-bar-tag-button";
-        Vdom.Attr.on_click (fun _ -> clear_tag name)
-      ]) [ text "⛌" ];
-    ] in
-  let%arr search_text = text
-  and tags_list = Value.map ~f:String.Set.to_list tags_list
-  and update_text = update_text
-  and update_tags = update_tags in
-  let reset_input () = update_text `Reset in
-  let add_tag t = update_tags (`AddTag t) in
-  let open Vdom.Node in
-  (search_text, tags_list, reset_input, add_tag),
-  div ~attr:(Vdom.Attr.class_ "configuration-search-bar") [
-    span ~attr:(Vdom.Attr.class_ "configuration-search-bar-tags") (
-      List.map ~f:(render_tag ~clear_tag:(fun name -> update_tags (`RemoveTag name)))
-        tags_list
-    );
-    input ~attr:(Vdom.Attr.many_without_merge [
-      Vdom.Attr.value_prop search_text;
-      Vdom.Attr.on_input (fun _ s -> update_text (`SetText s));
-      Vdom.Attr.on_change (fun _ s -> update_text (`SetText s));
-    ]) []
-  ]
-
-
 let bufferlist_to_view ~set_current_buffer ~set_state ~reload_state
       ~reload_current_buffer ~run_action
       (model: BufferList.t Value.t) : Vdom.Node.t Computation.t =
   let%sub current_buffer = return (Value.map ~f:BufferList.current_buffer model) in
-  let%sub (search_text, tags, clear_input, add_tag), search_bar = tagged_search_bar in
+  let%sub (search_text, tags, clear_input, add_tag), search_bar = Components.tagged_search_bar in
   let%sub hide_completed, toggle_hide_completed =
     Bonsai.state_machine0 [%here] (module Bool) (module Unit) ~default_model:false
       ~apply_action:(fun ~inject:_ ~schedule_event:_ model () -> not model) in
@@ -662,90 +535,10 @@ let bufferlist_to_view ~set_current_buffer ~set_state ~reload_state
       current_buffer
     ]
 
-let get_buffer_list_def () =
-  Async_kernel.Deferred.map
-    ~f:(fun s ->
-      Or_error.map ~f:(fun s ->
-        [%of_sexp: (string * string option) list] @@
-        Sexp.of_string s
-      ) s)
-    (Async_js.Http.get "/api/buffers")  
-
-let get_buffer_def name =
-  Async_kernel.Deferred.map
-    ~f:(fun s ->
-      Or_error.map ~f:(fun s ->
-        let (data, timestamp) =
-          [%of_sexp: Emacs_data.Data.t list * Emacs_data.Data.buffer_timestamp] @@
-          Sexp.of_string s in
-        (name, data, timestamp)
-      ) s)
-    (Async_js.Http.post ~body:(String name) "/api/buffer/load")
-
-let reload_buffer_def data =
-  let data = [%sexp_of: (string *
-                         Emacs_data.Data.buffer_timestamp)] data
-             |> Sexp.to_string_mach in
-  Async_kernel.Deferred.map
-    ~f:(fun s ->
-      Or_error.map ~f:(fun s ->
-        [%of_sexp:
-          (Emacs_data.Data.t list *
-           Emacs_data.Data.buffer_timestamp) option] @@
-        Sexp.of_string s
-      ) s)
-    (Async_js.Http.post ~body:(String data) "/api/buffer/reload")
-
-let reload_buffer_list_def current_buffer_name =
-  let open Async_kernel.Deferred.Result.Let_syntax in
-  let%bind buffer_list = get_buffer_list_def () in
-  let new_current_buffer =
-    match current_buffer_name with
-    | Some current_buffer_name when
-        List.exists ~f:(fun (filename, _) ->
-          String.equal current_buffer_name filename)
-          buffer_list ->
-      Some current_buffer_name
-    | _ -> Option.map ~f:fst (List.hd buffer_list) in
-  match new_current_buffer with
-  | None -> Async_kernel.Deferred.Result.return (buffer_list, None)
-  | Some current_buffer_name ->
-    let%bind data = get_buffer_def current_buffer_name in
-    Async_kernel.Deferred.Result.return
-      (buffer_list, Some data)
-
-let run_action_def data =
-  let data = [%sexp_of: (string * Emacs_data.Data.buffer_timestamp * int *
-                         [`clock_in | `clock_out | `change_todo | `open_in_emacs ])] data
-             |> Sexplib.Sexp.to_string_mach in
-  print_endline ("running action: "^ data);
-  Async_kernel.Deferred.map
-    ~f:(fun s ->
-      Or_error.map ~f:(fun s ->
-        [%of_sexp: unit option] @@
-        Sexp.of_string s
-      ) s)
-    (Async_js.Http.post ~body:(String data) "/api/buffer/action")
-
-let get_buffer_list =
-  Bonsai_web.Effect.of_deferred_fun get_buffer_list_def
-
-let reload_buffer_list =
-  Bonsai_web.Effect.of_deferred_fun reload_buffer_list_def
-
-let get_buffer =
-  Bonsai_web.Effect.of_deferred_fun get_buffer_def
-
-let reload_buffer =
-  Bonsai_web.Effect.of_deferred_fun reload_buffer_def
-
-let run_action =
-  Bonsai_web.Effect.of_deferred_fun run_action_def
-
 let view =
   let%sub state, set_state = Bonsai.state_opt [%here] (module BufferList) in
   let set_current_buffer set_state state name =
-    let%bind.Effect buffer = get_buffer name in
+    let%bind.Effect buffer = Actions.get_buffer name in
     match Buffer.init_opt buffer with
     | Some buffer ->
       let state = BufferList.set_current_buffer state buffer in
@@ -757,14 +550,15 @@ let view =
     | Some current_buffer ->
       let buffer_name = current_buffer.Buffer.buffer_filename in
       let buffer_timestamp = current_buffer.Buffer.timestamp in
-      let%bind.Effect data = reload_buffer (buffer_name, buffer_timestamp) in
+      let%bind.Effect data = Actions.reload_buffer (buffer_name, buffer_timestamp) in
       match Result.map ~f:(Option.bind ~f:(fun (d,t) -> Buffer.init_opt (Ok (buffer_name,d,t)))) data with
       | Ok (Some current_buffer) ->
         let state = BufferList.set_current_buffer buffer_list current_buffer in
         set_state (Some state)
       | _ -> Ui_effect.return () in
   let reload_state set_state buffer_list =
-    let%bind.Effect data = reload_buffer_list (Option.map ~f:Buffer.buffer_filename buffer_list.BufferList.current_buffer) in
+    let%bind.Effect data = Actions.reload_buffer_list
+                             (Option.map ~f:Buffer.buffer_filename buffer_list.BufferList.current_buffer) in
     match data with
     | Ok (buffer_list, current_buffer) ->
       let current_buffer = Buffer.init_opt (Result.of_option ~error:() current_buffer) in
@@ -773,7 +567,7 @@ let view =
       Ui_effect.return () in
   let%sub on_activate =
     let%arr set_state = set_state in
-    let%bind.Effect data = get_buffer_list () in
+    let%bind.Effect data = Actions.get_buffer_list () in
     set_state (BufferList.init_opt data) in
   let%sub () = Bonsai.Edge.lifecycle ~on_activate () in
   match%sub state with
@@ -781,7 +575,8 @@ let view =
     return loading_view
   | Some model ->
     let%sub buffer_list =
-      bufferlist_to_view ~set_current_buffer ~reload_current_buffer ~reload_state ~set_state ~run_action model in
+      bufferlist_to_view ~set_current_buffer ~reload_current_buffer ~reload_state ~set_state
+        ~run_action:Actions.run_action model in
     return buffer_list
 
 let application =
@@ -792,5 +587,3 @@ let application =
 let (_: _ Start.Handle.t) =
   Start.start Start.Result_spec.just_the_view ~bind_to_element_with_id:"app"
     application
-
-

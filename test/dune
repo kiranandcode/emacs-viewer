@@ -1,7 +1,3 @@
-(test
- (modules emacs_viewer)
- (name emacs_viewer))
-
 (executable (name sexp_parser)
  (modules sexp_parser)
  (preprocess (pps ppx_deriving.std))

@@ -1,25 +1,29 @@
   $ ../sexp_parser.exe --help
-  NAME
+  SEXP_PARSER.EXE(1)          Sexp_parser.exe Manual          SEXP_PARSER.EXE(1)
+  
+  
+  
+  NNAAMMEE
          sexp_parser.exe
   
-  SYNOPSIS
-         sexp_parser.exe [OPTION]… TYPE FILE
+  SSYYNNOOPPSSIISS
+         sseexxpp__ppaarrsseerr..eexxee [_O_P_T_I_O_N]… _T_Y_P_E _F_I_L_E
   
-  ARGUMENTS
-         FILE (required)
+  AARRGGUUMMEENNTTSS
+         _F_I_L_E (required)
              file containing sexp to parse
   
-         TYPE (required)
+         _T_Y_P_E (required)
              type of value to parse
   
-  COMMON OPTIONS
-         --help[=FMT] (default=auto)
-             Show this help in format FMT. The value FMT must be one of auto,
-             pager, groff or plain. With auto, the format is pager or plain
-             whenever the TERM env var is dumb or undefined.
+  CCOOMMMMOONN OOPPTTIIOONNSS
+         ----hheellpp[=_F_M_T] (default=aauuttoo)
+             Show this help in format _F_M_T. The value _F_M_T must be one of aauuttoo,
+             ppaaggeerr, ggrrooffff or ppllaaiinn. With aauuttoo, the format is ppaaggeerr or ppllaaiinn
+             whenever the TTEERRMM env var is dduummbb or undefined.
   
-  EXIT STATUS
-         sexp_parser.exe exits with the following status:
+  EEXXIITT SSTTAATTUUSS
+         sseexxpp__ppaarrsseerr..eexxee exits with the following status:
   
          0   on success.
   
@@ -29,3 +33,6 @@
   
          125 on unexpected internal errors (bugs).
   
+  
+  
+  Sexp_parser.exe                                             SEXP_PARSER.EXE(1)
