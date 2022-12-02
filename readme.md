@@ -25,8 +25,7 @@ Awesome features!
 ![tag_filtering](https://codeberg.org/gopiandcode/emacs-viewer/raw/branch/master/images/tag-support.gif)
 
 ## Project setup
-
-To install the project dependencies, simply run:
+Emacs_viewer requires OCaml 4.14.0 to build, to install the project dependencies, simply run:
 
 ```bash
 opam install --deps-only .
