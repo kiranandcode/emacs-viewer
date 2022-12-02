@@ -48,16 +48,32 @@ CLOSED: [2022-12-02 Fri 01:12]
 CLOSED: [2022-12-02 Fri 01:31]
 ** DONE refresh code on clock edge
 CLOSED: [2022-12-02 Fri 01:35]
-* TODO Add button to task to open-in-emacs, on click on button, send request to server, server send request to emacs
-:LOGBOOK:
-CLOCK: [2022-12-01 Fri 17:41]
+* DONE Add button to task to open-in-emacs, on click on button, send request to server, server send request to emacs
+CLOSED: [2022-12-02 Fri 07:46]
+:PROPERTIES:
+:ORDERED:  t
 :END:
-** TODO write elisp code to open window to position
-** TODO add endpoint to open in emacs
-** TODO 
-* TODO Add support to clock in
-* TODO Add support to clock out
+:LOGBOOK:
+CLOCK: [2022-12-02 Fri 07:27]--[2022-12-02 Fri 07:31] =>  0:04
+CLOCK: [2022-12-02 Fri 07:25]--[2022-12-02 Fri 07:25] =>  0:00
+CLOCK: [2022-12-02 Fri 07:25]--[2022-12-02 Fri 07:25] =>  0:00
+CLOCK: [2022-12-02 Fri 07:20]--[2022-12-02 Fri 07:21] =>  0:01
+CLOCK: [2022-12-02 Fri 04:02]--[2022-12-02 Fri 04:06] =>  0:04
+:END:
+** DONE write elisp code to open window to position
+CLOSED: [2022-12-02 Fri 07:27]
+** DONE add endpoint to open in emacs
+CLOSED: [2022-12-02 Fri 07:46]
+* DONE Add support to clock in
+CLOSED: [2022-12-02 Fri 07:46]
+* DONE Add support to clock out
+CLOSED: [2022-12-02 Fri 07:46]
 * DONE Show running tasks
 CLOSED: [2022-12-01 Thu 13:02]
 * DONE Add option to hide/show hidden tasks
 CLOSED: [2022-12-01 Thu 13:02]
+* TODO Fix loading screen
+:LOGBOOK:
+CLOCK: [2022-12-02 Fri 07:53]
+:END:
+* TODO Fix rendering of timestamps such as <2022-12-02 Fri>

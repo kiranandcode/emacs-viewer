@@ -4,6 +4,7 @@ open! Bonsai_web
 open Bonsai.Let_syntax
 
 module Buffer = struct
+
   type t = {
     timestamp: Emacs_data.Data.buffer_timestamp;
     buffer_filename: string;
@@ -13,7 +14,6 @@ module Buffer = struct
   let init_opt data = match data with
     | Ok (filename, data, timestamp) -> Some {buffer_filename=filename;elements=data;timestamp}
     | Error _ -> None
-
 
 end
 
@@ -184,7 +184,8 @@ let rec subsection_contains_matching ~hide_completed ~only_clocked ~search_text 
   | Emacs_data.Data.Clock _
   | Emacs_data.Data.Planning _ -> false
 
-let rec data_to_view ~hide_completed ~only_clocked  ~search_text ~filter_tags ~add_tag :
+let rec data_to_view ~hide_completed ~only_clocked  ~search_text ~filter_tags ~add_tag
+      ~open_in_emacs ~change_clock_status ~change_todo_status :
   Emacs_data.Data.t Value.t -> Vdom.Node.t Computation.t = fun data ->
   match%sub data with
   | Emacs_data.Data.Property { key; value; pos=_ } ->
@@ -198,13 +199,14 @@ let rec data_to_view ~hide_completed ~only_clocked  ~search_text ~filter_tags ~a
     )
   | Emacs_data.Data.Section { pos=_; properties } ->
     let%sub children = Bonsai.lazy_ @@
-      lazy (mapM ~f:(data_to_view  ~only_clocked ~hide_completed ~search_text ~filter_tags ~add_tag) properties) in
+      lazy (mapM ~f:(data_to_view  ~only_clocked ~hide_completed ~search_text ~filter_tags ~add_tag
+                       ~open_in_emacs ~change_clock_status ~change_todo_status) properties) in
     let%arr children = children in
     adiv ~cls:["org-mode-section"; "org-mode-children";] children
   | Emacs_data.Data.Headline {
     title;
     raw_value;
-    pos=_; level;
+    pos; level;
     priority=_; 
     tags;
     todo;
@@ -307,7 +309,8 @@ let rec data_to_view ~hide_completed ~only_clocked  ~search_text ~filter_tags ~a
       let subsections = Bonsai.lazy_ @@
         lazy (mapM ~f:(data_to_view
                          ~only_clocked ~hide_completed
-                         ~search_text ~filter_tags ~add_tag) subsections) in
+                         ~search_text ~filter_tags ~add_tag
+                         ~open_in_emacs ~change_clock_status ~change_todo_status) subsections) in
       let%sub subsections =
         if%sub should_fold then return (Value.return []) else subsections in
       let%arr subsections = subsections
@@ -317,7 +320,18 @@ let rec data_to_view ~hide_completed ~only_clocked  ~search_text ~filter_tags ~a
       and todo = todo
       and add_tag = add_tag
       and clock_run_time = clock_run_time
-      and fold_buttons_panel = fold_buttons_panel in
+      and fold_buttons_panel = fold_buttons_panel
+      and open_in_emacs = open_in_emacs
+      and change_clock_status = change_clock_status
+      and change_todo_status = change_todo_status
+      and pos = pos in
+
+      let section_button effect icon =
+        Vdom.Node.div ~attr:(Vdom.Attr.many_without_merge [
+          Vdom.Attr.class_ "org-mode-section-button";
+          Vdom.Attr.on_click effect;
+        ]) [ Vdom.Node.(a [text icon]); ] in
+
       Vdom.Node.div
         ~attr:Vdom.Attr.(many_without_merge [
           classes ["org-mode-headline"; ("org-mode-headline-" ^ Int.to_string level)];
@@ -343,9 +357,9 @@ let rec data_to_view ~hide_completed ~only_clocked  ~search_text ~filter_tags ~a
                   [adiv ~cls:["org-mode-title-clock"] [Vdom.Node.text run_time]]);
                [adiv ~cls:["org-mode-section-buttons"] ([
                   adiv ~cls:["org-mode-section-action-buttons"] [
-                    adiv ~cls:["org-mode-section-button"] [ Vdom.Node.(a [text "📂"]); ];
-                    adiv ~cls:["org-mode-section-button"] [ Vdom.Node.(a [text "🕓"]); ];
-                    adiv ~cls:["org-mode-section-button"] [ Vdom.Node.(a [text "🞋"]); ];
+                    section_button (fun _ -> print_endline "opening in emacs"; open_in_emacs pos.begin_) "📂";
+                    section_button (fun _ -> change_clock_status pos.begin_ (Option.is_none clock_run_time)) "🕓";
+                    section_button (fun _ -> change_todo_status pos.begin_) "🞋";
                   ];
                 ] @ fold_buttons_panel)]
              ]);
@@ -361,7 +375,8 @@ let rec data_to_view ~hide_completed ~only_clocked  ~search_text ~filter_tags ~a
     else return (Value.return (Vdom.Node.text ""))
   | Emacs_data.Data.Drawer { name; pos=_; contents } ->
     let%sub contents = Bonsai.lazy_ @@
-      lazy (mapM ~f:(data_to_view ~only_clocked ~hide_completed ~search_text ~filter_tags ~add_tag) contents) in
+      lazy (mapM ~f:(data_to_view ~only_clocked ~hide_completed ~search_text ~filter_tags ~add_tag
+                    ~open_in_emacs ~change_clock_status ~change_todo_status) contents) in
     let%arr contents = contents
     and name = name in
     adiv ~cls:["org-mode-drawer"] [
@@ -404,9 +419,9 @@ let rec data_to_view ~hide_completed ~only_clocked  ~search_text ~filter_tags ~a
             [render_timestamp deadline]]);
     ])
 
-
 let current_buffer_to_view
-      ~hide_completed ~only_clocked ~search_text ~filter_tags ~add_tag current_buffer =
+      ~hide_completed ~only_clocked ~search_text ~filter_tags ~add_tag
+      ~open_in_emacs ~change_clock_status ~change_todo_status current_buffer =
   match%sub current_buffer with
   | None ->
     return @@ (Value.return @@
@@ -415,7 +430,8 @@ let current_buffer_to_view
                           "centered-column"] [Vdom.Node.text "Please select a buffer..."])
   | Some buffer ->
     let%sub buffer_entries =
-      mapM ~f:(data_to_view ~only_clocked ~hide_completed ~search_text ~filter_tags ~add_tag)
+      mapM ~f:(data_to_view ~only_clocked ~hide_completed ~search_text ~filter_tags ~add_tag
+                 ~open_in_emacs ~change_clock_status ~change_todo_status)
         (Value.map ~f:Buffer.elements buffer) in
     let%arr buffer_entries = buffer_entries in
     adiv ~cls:["org-mode-current-buffer"; "centered-column"] buffer_entries
@@ -443,12 +459,6 @@ let navigation_bar_view set_current_buffer reload_state buffers =
           a ~attr:(Vdom.Attr.classes ["buffer-refresh"]) [text "↻"];
         ]]];
   ])
-
-module S = [%css.raw {|
-  .configuration_buttons {
-     display: flex;
-  }
-|}]
 
 let tag_split_re = Re.compile (Re.Pcre.re ":[^ ]*?(:[^ ]*?)*:")
 let split_tags s =
@@ -522,7 +532,7 @@ let tagged_search_bar =
 
 
 let bufferlist_to_view ~set_current_buffer ~set_state ~reload_state
-      ~reload_current_buffer
+      ~reload_current_buffer ~run_action
       (model: BufferList.t Value.t) : Vdom.Node.t Computation.t =
   let%sub current_buffer = return (Value.map ~f:BufferList.current_buffer model) in
   let%sub (search_text, tags, clear_input, add_tag), search_bar = tagged_search_bar in
@@ -532,10 +542,47 @@ let bufferlist_to_view ~set_current_buffer ~set_state ~reload_state
   let%sub only_clocked, toggle_only_clocked =
     Bonsai.state_machine0 [%here] (module Bool) (module Unit) ~default_model:false
       ~apply_action:(fun ~inject:_ ~schedule_event:_ model () -> not model) in
-
+  let%sub open_in_emacs =
+    let%arr model = model
+    and set_state = set_state in
+    match model.current_buffer with
+    | None -> fun _ -> print_endline "model is empty"; Ui_effect.return ()
+    | Some buffer ->
+      fun pos ->
+        let%bind.Effect res = run_action (buffer.buffer_filename, buffer.timestamp, pos, `open_in_emacs) in
+        match res with
+        | Error _ -> Ui_effect.return ()
+        | Ok (Some ()) -> Ui_effect.return ()
+        | _ -> reload_current_buffer set_state model in
+  let%sub change_clock_status =
+    let%arr model = model
+    and set_state = set_state in
+    match model.current_buffer with
+    | None -> fun _ _ -> Ui_effect.return ()
+    | Some buffer ->
+      fun pos active ->
+        let action = if active then `clock_in else `clock_out in
+        let%bind.Effect res = run_action (buffer.buffer_filename, buffer.timestamp, pos, action) in
+        match res with
+        | Error _ -> Ui_effect.return ()
+        | Ok _ ->
+          reload_current_buffer set_state model in
+  let%sub change_todo_status =
+    let%arr model = model
+    and set_state = set_state in
+    match model.current_buffer with
+    | None -> fun _ -> Ui_effect.return ()
+    | Some buffer ->
+      fun pos ->
+        let%bind.Effect res = run_action (buffer.buffer_filename, buffer.timestamp, pos, `change_todo) in
+        match res with
+        | Error _ -> Ui_effect.return ()
+        | Ok _ ->
+          reload_current_buffer set_state model in
   let%sub current_buffer_view =
     current_buffer_to_view ~hide_completed ~only_clocked
-      ~search_text ~filter_tags:tags ~add_tag current_buffer in
+      ~search_text ~filter_tags:tags ~add_tag
+      ~open_in_emacs ~change_clock_status ~change_todo_status current_buffer in
 
   let%sub hide_completed_button =
     let%sub icon = if%sub hide_completed
@@ -562,7 +609,7 @@ let bufferlist_to_view ~set_current_buffer ~set_state ~reload_state
   let%sub reload_buffer_action =
     let%arr model = model and set_state = set_state in
     reload_current_buffer set_state model in
-  let%sub () = Bonsai.Clock.every [%here] (Time_ns.Span.of_sec 2.) reload_buffer_action in
+  let%sub () = Bonsai.Clock.every [%here] (Time_ns.Span.of_sec 5.) reload_buffer_action in
   let%arr buffers = Value.map ~f:BufferList.buffers model
   and current_buffer = current_buffer_view
   and model = model 
@@ -638,7 +685,7 @@ let get_buffer_def name =
 let reload_buffer_def data =
   let data = [%sexp_of: (string *
                          Emacs_data.Data.buffer_timestamp)] data
-           |> Sexp.to_string_mach in
+             |> Sexp.to_string_mach in
   Async_kernel.Deferred.map
     ~f:(fun s ->
       Or_error.map ~f:(fun s ->
@@ -658,7 +705,7 @@ let reload_buffer_list_def current_buffer_name =
         List.exists ~f:(fun (filename, _) ->
           String.equal current_buffer_name filename)
           buffer_list ->
-     Some current_buffer_name
+      Some current_buffer_name
     | _ -> Option.map ~f:fst (List.hd buffer_list) in
   match new_current_buffer with
   | None -> Async_kernel.Deferred.Result.return (buffer_list, None)
@@ -666,6 +713,19 @@ let reload_buffer_list_def current_buffer_name =
     let%bind data = get_buffer_def current_buffer_name in
     Async_kernel.Deferred.Result.return
       (buffer_list, Some data)
+
+let run_action_def data =
+  let data = [%sexp_of: (string * Emacs_data.Data.buffer_timestamp * int *
+                         [`clock_in | `clock_out | `change_todo | `open_in_emacs ])] data
+             |> Sexplib.Sexp.to_string_mach in
+  print_endline ("running action: "^ data);
+  Async_kernel.Deferred.map
+    ~f:(fun s ->
+      Or_error.map ~f:(fun s ->
+        [%of_sexp: unit option] @@
+        Sexp.of_string s
+      ) s)
+    (Async_js.Http.post ~body:(String data) "/api/buffer/action")
 
 let get_buffer_list =
   Bonsai_web.Effect.of_deferred_fun get_buffer_list_def
@@ -678,6 +738,9 @@ let get_buffer =
 
 let reload_buffer =
   Bonsai_web.Effect.of_deferred_fun reload_buffer_def
+
+let run_action =
+  Bonsai_web.Effect.of_deferred_fun run_action_def
 
 let view =
   let%sub state, set_state = Bonsai.state_opt [%here] (module BufferList) in
@@ -718,7 +781,7 @@ let view =
     return loading_view
   | Some model ->
     let%sub buffer_list =
-      bufferlist_to_view ~set_current_buffer ~reload_current_buffer ~reload_state ~set_state model in
+      bufferlist_to_view ~set_current_buffer ~reload_current_buffer ~reload_state ~set_state ~run_action model in
     return buffer_list
 
 let application =

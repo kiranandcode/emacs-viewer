@@ -13,11 +13,18 @@ let emacs_cmd fmt =
     |> Result.map_error ~f:(fun _ -> `Msg "emacs RPC failed")
   ) fmt
 
+let emacs_cmd_unit fmt =
+  let open Bos in
+  Format.ksprintf (fun s -> 
+    OS.Cmd.run Cmd.(emacs % "-e" % s)
+    |> Result.map_error ~f:(fun _ -> `Msg "emacs RPC failed")
+  ) fmt
+
 
 let html ?status ?code ?headers s = Lwt_result.ok @@ Dream.html ?status ?code ?headers s
 let sexp ?status ?code ?headers s =
   let headers = Option.value ~default:[] headers
-              |> List.cons ("Content-Type", "text/plain") in
+                |> List.cons ("Content-Type", "text/plain") in
   Lwt_result.ok @@
   Dream.respond ?status ?code ~headers (Sexp.to_string_mach s)
 
@@ -150,6 +157,28 @@ let get_buffer_data buffer_filename =
   } in
   Lwt_result.return data
 
+let run_at_pos ~filename:buffer_filename ~pos ~focus command =
+  let open Lwt_result.Let_syntax in
+  let cmd =
+    if focus
+    then
+      Format.sprintf {elisp|
+(let ((buffer (find-buffer-visiting "%s")))
+  (select-window (or (get-buffer-window buffer) (selected-window)))
+  (switch-to-buffer buffer)
+  (goto-char %d)
+  (%s))
+|elisp} buffer_filename pos command
+    else
+      Format.sprintf {elisp|
+(let ((buffer (find-buffer-visiting "%s")))
+  (with-current-buffer buffer
+        (goto-char %d)
+        (%s)))
+|elisp} buffer_filename pos command in
+  let%bind () = Lwt_result.lift @@ emacs_cmd_unit "%s" cmd in
+  Lwt_result.return ()
+
 let api_routes =
   let open Lwt_result.Let_syntax in
   Dream.scope "/api" [] [
@@ -195,8 +224,8 @@ let api_routes =
           |> Result.map_error ~f:(fun err -> `Msg ("Invalid data: " ^ Exn.to_string err))
           |> Lwt.return in
         let%bind last_modified_timestamp = get_buffer_timestamp buffer_filename
-                             |> Lwt_result.map_error
-                                  (fun _ -> `Msg "Emacs RPC failed - invalid filename?") in
+                                           |> Lwt_result.map_error
+                                                (fun _ -> `Msg "Emacs RPC failed - invalid filename?") in
         if Emacs_data.Data.buffer_timestamp_gt client_timestamp last_modified_timestamp
         then begin
           let%bind cached_data = Lwt_mutex.with_lock state_lock (fun () ->
@@ -215,7 +244,34 @@ let api_routes =
         else sexp ([%sexp_of: (Emacs_data.Data.t list * Emacs_data.Data.buffer_timestamp) option]
                      None)
       end
-    )    
+    );    
+    Dream.post "/buffer/action" (fun req ->
+      handle_error begin
+        let%bind request_data = Lwt_result.ok @@ Dream.body req in
+        let%bind buffer_filename, client_timestamp, pos, action =
+          Result.try_with (fun () ->
+            [%of_sexp: (string * Emacs_data.Data.buffer_timestamp * int *
+                        [`clock_in | `clock_out | `change_todo | `open_in_emacs ])]
+              (Sexp.of_string request_data))
+          |> Result.map_error ~f:(fun err -> `Msg ("Invalid data: " ^ Exn.to_string err))
+          |> Lwt.return in
+        let%bind last_modified_timestamp =
+          get_buffer_timestamp buffer_filename
+          |> Lwt_result.map_error
+               (fun _ -> `Msg "Emacs RPC failed - invalid filename?") in
+        if Emacs_data.Data.buffer_timestamp_gt client_timestamp last_modified_timestamp
+        then sexp ([%sexp_of: unit option] None)
+        else begin
+          let command, focus = match action with
+            | `clock_in -> "org-clock-in", false
+            | `clock_out -> "org-clock-out", false
+            | `change_todo -> "org-todo", false
+            | `open_in_emacs -> "progn", true in
+          let%bind () = run_at_pos ~filename:buffer_filename ~pos ~focus command in
+          sexp ([%sexp_of: unit option] (Some ()))
+        end
+      end
+    )
   ]
 
 let run port =
